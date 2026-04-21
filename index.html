@@ -513,8 +513,9 @@ const APP={
     {id:3,name:'Benchmark de precios Q1',client:'Tecno Grupo',consultant:'Ana Torres',ci:'AT',cc:'aa',type:'Benchmark',area:'Finanzas',status:'done',pct:100,cost:4800,weeks:2,cw:2,delivery:'10 mar',tags:['Excel'],rating:5,notes:'',appliedStudents:[3],selectedStudent:3,startDate:'24 feb',daysLeft:0,earlyBonus:true},
     {id:4,name:'Presupuesto anual 2024',client:'Tecno Grupo',consultant:'Carlos M.',ci:'CM',cc:'ae',type:'Presupuesto',area:'Finanzas',status:'done',pct:100,cost:4200,weeks:3,cw:3,delivery:'15 ene',tags:['Sheets'],rating:4,notes:'',appliedStudents:[4],selectedStudent:4,startDate:'25 dic',daysLeft:0},
     {id:5,name:'Flujo de efectivo Q3',client:'Tecno Grupo',consultant:'Roberto P.',ci:'RP',cc:'ag',type:'Flujo',area:'Finanzas',status:'done',pct:100,cost:7200,weeks:2,cw:2,delivery:'5 dic',tags:['Excel'],rating:5,notes:'',appliedStudents:[1],selectedStudent:1,startDate:'21 nov',daysLeft:0},
-    {id:6,name:'Análisis mercado SaaS — Flowtask',client:'Flowtask',consultant:'',ci:'',cc:'ab',type:'Análisis mercado',area:'Estrategia',status:'nomatch',pct:0,cost:5500,weeks:2,cw:0,delivery:'3 may',tags:['Excel','Estrategia'],rating:0,notes:'',appliedStudents:[],selectedStudent:null,startDate:'',daysLeft:20,daysSincePost:3},
+    {id:6,name:'Análisis mercado SaaS — Flowtask',client:'Flowtask',consultant:'',ci:'',cc:'ab',type:'Análisis mercado',area:'Estrategia',status:'nomatch',pct:0,cost:5500,weeks:2,cw:0,delivery:'3 may',tags:['Excel','Estrategia'],rating:0,notes:'',appliedStudents:[2,4],selectedStudent:null,startDate:'',daysLeft:20,daysSincePost:3},
     {id:7,name:'Plan financiero PYME textil',client:'Confecciones RG',consultant:'',ci:'',cc:'ab',type:'Plan financiero',area:'Finanzas',status:'nomatch',pct:0,cost:8000,weeks:4,cw:0,delivery:'15 may',tags:['Excel','Finanzas'],rating:0,notes:'',appliedStudents:[4,5],selectedStudent:null,startDate:'',daysLeft:35,daysSincePost:6},
+    {id:8,name:'Análisis de costos Q2',client:'Tecno Grupo',consultant:'',ci:'',cc:'ab',type:'Análisis de costos',area:'Costos',status:'nomatch',pct:0,cost:6000,weeks:2,cw:0,delivery:'28 abr',tags:['Power BI','Costos'],rating:0,notes:'',appliedStudents:[2,3,5],selectedStudent:null,startDate:'',daysLeft:14,daysSincePost:2},
   ],
   students:[
     {id:1,name:'Luis Acosta',init:'LA',cls:'ag',uni:'UANL',career:'Finanzas',area:'Finanzas',year:4,skills:['Excel avanzado','Modelos financieros','Power BI','Google Sheets'],certSkills:{excel:95,powerbi:80,python:40,sheets:85},rating:4.8,ratings:[5,5,4,5,5],reviews:[{company:'Tecno Grupo',r:5,txt:'Excelente trabajo, muy puntual. Superó expectativas.',date:'Mar 2025'},{company:'La Fogata MX',r:5,txt:'Entregó antes de tiempo con calidad excepcional.',date:'Feb 2025'}],projects:4,hrs:15,earned:19200,available:true,status:'active',company:'',lastSeen:'Hoy',activeProject:1,appliedTo:[6],
@@ -650,11 +651,11 @@ const matchScore=(student,project)=>{
 // NAV
 // ============================================================
 const NAV={
-  emp:[{id:'home',label:'Inicio',icon:'grid'},{id:'new',label:'Nuevo proyecto',icon:'plus'},{id:'proj',label:'Mis proyectos',icon:'folder'},{id:'msgs',label:'Mensajes',icon:'msg'},{id:'mem',label:'Membresía',icon:'bolt'},{id:'pay',label:'Pagos',icon:'receipt'}],
+  emp:[{id:'home',label:'Inicio',icon:'grid'},{id:'new',label:'Nuevo proyecto',icon:'plus'},{id:'proj',label:'Mis proyectos',icon:'folder'},{id:'match',label:'Seleccionar consultor',icon:'link'},{id:'msgs',label:'Mensajes',icon:'msg'},{id:'mem',label:'Membresía',icon:'bolt'},{id:'pay',label:'Pagos',icon:'receipt'}],
   est:[{id:'home',label:'Inicio',icon:'grid'},{id:'explore',label:'Explorar proyectos',icon:'search'},{id:'myproy',label:'Mis proyectos',icon:'folder'},{id:'courses',label:'Cursos',icon:'book'},{id:'perf',label:'Mi desempeño',icon:'star'},{id:'earn',label:'Ganancias',icon:'dollar'}],
   dash:[{id:'home',label:'Dashboard',icon:'grid'},{id:'rev',label:'Ingresos',icon:'chart'},{id:'kanban',label:'Proyectos',icon:'folder'},{id:'match',label:'Matching',icon:'link'},{id:'talent',label:'Talento',icon:'user'},{id:'cur',label:'Cursos',icon:'book'},{id:'act',label:'Actividad',icon:'bell'},{id:'billing',label:'Facturación',icon:'receipt'},{id:'sim',label:'Simulador',icon:'sim'}],
 };
-const TABS={emp:{home:'Inicio',new:'Nuevo proyecto',proj:'Proyectos',msgs:'Mensajes',mem:'Membresía',pay:'Pagos'},est:{home:'Inicio',explore:'Explorar',myproy:'Mis proyectos',courses:'Cursos',perf:'Desempeño',earn:'Ganancias'},dash:{home:'Dashboard',rev:'Ingresos',kanban:'Proyectos',match:'Matching',talent:'Talento',cur:'Cursos',act:'Actividad',billing:'Facturación',sim:'Simulador'}};
+const TABS={emp:{home:'Inicio',new:'Nuevo proyecto',proj:'Proyectos',match:'Seleccionar consultor',msgs:'Mensajes',mem:'Membresía',pay:'Pagos'},est:{home:'Inicio',explore:'Explorar',myproy:'Mis proyectos',courses:'Cursos',perf:'Desempeño',earn:'Ganancias'},dash:{home:'Dashboard',rev:'Ingresos',kanban:'Proyectos',match:'Matching',talent:'Talento',cur:'Cursos',act:'Actividad',billing:'Facturación',sim:'Simulador'}};
 const MODELABELS={emp:'Empresas',est:'Estudiantes',dash:'Panel socios'};
 
 function setMode(m){
@@ -675,7 +676,8 @@ function buildSidebarNav(m){
   const unread=APP.notifications.filter(n=>!n.read).length;
   document.getElementById('sidebar-nav').innerHTML=NAV[m].map(item=>{
     const active=APP.tab[m]===item.id;
-    const badge=(m==='emp'&&item.id==='msgs'&&unread>0)?`<div class="bdot">${unread}</div>`:'';
+    const pendingMatch=m==='emp'&&item.id==='match'&&APP.projects.filter(p=>p.client==='Tecno Grupo'&&p.appliedStudents&&p.appliedStudents.length>0&&!p.selectedStudent).length>0;
+      const badge=pendingMatch?`<div class="bdot">${APP.projects.filter(p=>p.client==='Tecno Grupo'&&p.appliedStudents&&p.appliedStudents.length>0&&!p.selectedStudent).length}</div>`:m==='emp'&&item.id==='msgs'&&unread>0?`<div class="bdot">${unread}</div>`:'';
     return`<button class="nav-btn${active?' on':''}" onclick="goTab('${m}','${item.id}')" id="nb-${item.id}">${ic(item.icon,15)}<span class="nav-lbl">${item.label}</span>${badge}</button>`;
   }).join('');
   const sq=document.getElementById('sidebar-quick');
@@ -1946,7 +1948,7 @@ SCREENS.emp.home=()=>`
       </div>`).join('')}
     ${shdr('Sin match — acción requerida')}
     ${APP.projects.filter(p=>p.status==='nomatch').map(p=>`
-      <div class="card card-r card-hover" onclick="showToast('Contacta a tu gestor para acelerar el matching','info')">
+      <div class="card card-r card-hover" onclick="goTab('emp','match')">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div class="ct" style="font-size:13px">${p.name}</div>${bdg('br',p.daysSincePost+'d sin match')}</div>
         <div class="cs">${p.type} · ${fmtMXN(p.cost)} · Entrega ${p.delivery}</div>
       </div>`).join('')}
@@ -2112,6 +2114,193 @@ SCREENS.emp.new=()=>`
     <div style="display:flex;justify-content:space-between">${btn('← Editar','btn-sec',false,"wizGo(3)")}${btn('Publicar proyecto ✓','btn-g btn-lg',false,"submitProject()")}</div>
   </div>
 </div>`;
+
+// ---- EMP MATCH ----
+SCREENS.emp.match=()=>{
+  const myProjects=APP.projects.filter(p=>p.client==='Tecno Grupo');
+  const withApplicants=myProjects.filter(p=>p.appliedStudents&&p.appliedStudents.length>0&&!p.selectedStudent&&p.status==='nomatch');
+  const matched=myProjects.filter(p=>p.selectedStudent&&(p.status==='active'||p.status==='review'));
+  const waiting=myProjects.filter(p=>p.status==='nomatch'&&(!p.appliedStudents||p.appliedStudents.length===0));
+
+  return`
+<div class="hero hero-bk" style="margin-bottom:20px">
+  <div class="hero-eye">Empresas · Matching</div>
+  <div class="hero-title">Seleccionar consultor</div>
+  <div class="hero-sub">Revisa los perfiles de los estudiantes que aplicaron a tus proyectos y elige al más adecuado</div>
+  <div class="hero-chips">
+    <span class="hchip hchip-hi">${withApplicants.reduce((a,p)=>a+p.appliedStudents.length,0)} aplicantes esperando</span>
+    <span class="hchip">${matched.length} proyectos con consultor asignado</span>
+    <span class="hchip">${waiting.length} en espera de aplicantes</span>
+  </div>
+</div>
+
+${withApplicants.length===0?`
+  <div class="card" style="text-align:center;padding:48px">
+    <div style="font-size:36px;margin-bottom:12px">🎯</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">Sin selecciones pendientes</div>
+    <div class="cs" style="margin-bottom:16px">Cuando los estudiantes apliquen a tus proyectos aparecerán aquí</div>
+    ${btn('+ Publicar nuevo proyecto','btn-g',false,"goTab('emp','new')")}
+  </div>`
+:withApplicants.map(p=>{
+  const applicants=APP.students.filter(s=>p.appliedStudents.includes(s.id));
+  return`
+  <div style="margin-bottom:28px">
+    <!-- Project header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:3px">${p.name}</div>
+        <div class="cs">${p.type} · ${p.area} · ${p.weeks} semanas · ${fmtMXN(p.cost)} · Entrega ${p.delivery}</div>
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+      ${bdg('bb','⏳ Elige un consultor')}
+    </div>
+
+    <!-- Applicant cards -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${applicants.map(s=>{
+        const ms=matchScore(s,p);
+        const areaMatch=s.area===p.area;
+        const skillMatches=p.tags.filter(t=>s.skills.some(sk=>sk.toLowerCase().includes(t.toLowerCase())));
+        const avgRating=(s.ratings.reduce((a,b)=>a+b,0)/s.ratings.length).toFixed(1);
+        const payMin=fmtMXN(Math.round(p.cost*0.6));
+        const payMax=fmtMXN(Math.round(p.cost*0.7));
+        const barColor=ms>=75?'var(--g3)':ms>=55?'var(--amb)':'var(--rose)';
+        return`
+        <div style="background:var(--wh);border:2px solid ${ms>=75?'var(--g4)':ms>=55?'#fde68a':'var(--sb)'};border-radius:var(--r);padding:18px;transition:var(--tr)" onmouseover="this.style.boxShadow='var(--sh-md)'" onmouseout="this.style.boxShadow='none'">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+
+            <!-- Avatar -->
+            <div style="flex-shrink:0;cursor:pointer" onclick="openStudentModal(${s.id})">
+              ${ava(s.init,s.cls,52)}
+            </div>
+
+            <!-- Info -->
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+                <div>
+                  <div style="font-size:15px;font-weight:700;cursor:pointer;margin-bottom:2px" onclick="openStudentModal(${s.id})">${s.name}</div>
+                  <div class="cs">${s.career} · ${s.uni} · ${s.year}° semestre</div>
+                  <div class="cs2" style="margin-top:2px">${s.area} · ${s.projects} proyectos completados · ${s.hrs}h/sem disponibles</div>
+                </div>
+                <!-- Match % -->
+                <div style="text-align:center;flex-shrink:0">
+                  <div style="font-size:30px;font-weight:800;color:${barColor};font-family:'JetBrains Mono',monospace;line-height:1">${ms}%</div>
+                  <div class="cs2">compatibilidad</div>
+                  <!-- Mini gauge bar -->
+                  <div style="width:72px;height:5px;background:var(--sb);border-radius:3px;margin:4px auto 0;overflow:hidden">
+                    <div style="height:100%;width:${ms}%;background:${barColor};border-radius:3px;transition:width .6s ease"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Match tags -->
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin:10px 0 8px">
+                <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${areaMatch?'var(--g-ll)':'var(--rose-l)'};color:${areaMatch?'var(--g1)':'var(--rose-d)'};font-weight:600;border:1px solid ${areaMatch?'var(--g-l)':'var(--rose-l)'}">${areaMatch?'✓ Área coincide':'✗ Área diferente ('+s.area+')'}</span>
+                ${skillMatches.map(sk=>`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--g-ll);color:var(--g1);font-weight:600;border:1px solid var(--g-l)">✓ ${sk}</span>`).join('')}
+                <span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--amb-l);color:var(--amb-d);font-weight:600">★ ${avgRating}</span>
+                ${s.projects>=3?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:var(--ind-ll);color:var(--ind);font-weight:600">${s.projects} proyectos</span>`:''}
+              </div>
+
+              <!-- Skill bars (compact) -->
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px">
+                ${Object.entries(s.certSkills).slice(0,4).map(([sk,w])=>`
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-bottom:2px">
+                      <span>${sk.toUpperCase()}</span><span style="color:var(--g3);font-weight:600">${w}%</span>
+                    </div>
+                    <div style="height:4px;background:var(--sb);border-radius:2px;overflow:hidden">
+                      <div style="height:100%;width:${w}%;background:var(--g3);border-radius:2px"></div>
+                    </div>
+                  </div>`).join('')}
+              </div>
+
+              <!-- Review preview -->
+              ${s.reviews.length?`
+                <div style="background:var(--sl);border-radius:var(--rs);padding:10px;margin-bottom:12px;border-left:3px solid var(--g-l)">
+                  <div style="font-size:12px;color:var(--t2);font-style:italic;line-height:1.5">"${s.reviews[0].txt}"</div>
+                  <div class="cs2" style="margin-top:4px">— ${s.reviews[0].company} · ${'★'.repeat(s.reviews[0].r)}</div>
+                </div>`:''}
+
+              <!-- Pay estimate + Actions -->
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div style="background:var(--g-ll);border:1px solid var(--g-l);border-radius:var(--rs);padding:8px 12px">
+                  <div class="cs2">Pago al consultor si es seleccionado</div>
+                  <div style="font-weight:700;color:var(--g1);font-family:'JetBrains Mono',monospace">${payMin} – ${payMax}</div>
+                </div>
+                <div style="display:flex;gap:7px;flex-wrap:wrap">
+                  ${btn(ic('eye',13)+' Ver perfil','btn-ghost btn-sm',false,`openStudentModal(${s.id})`)}
+                  ${btn(ic('file',13)+' Ver CV','btn-sec btn-sm',false,`openStudentCV(${s.id})`)}
+                  ${btn('✓ Seleccionar a '+s.name.split(' ')[0],'btn-g',false,`confirmSelectConsultant(${p.id},${s.id})`)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="height:1px;background:var(--sb);margin-top:20px"></div>
+  </div>`;
+}).join('')}
+
+${matched.length?`
+  ${shdr('Proyectos con consultor ya asignado')}
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+    ${matched.map(p=>{
+      const s=APP.students.find(x=>x.id===p.selectedStudent);
+      return`<div class="card card-hover card-g" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px" onclick="openProjectModal(${p.id})">
+        <div>
+          <div class="ct">${p.name}</div>
+          <div class="cs">${p.type} · Entrega ${p.delivery}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${s?`<div style="display:flex;align-items:center;gap:7px">${ava(s.init,s.cls,28)}<span class="cs">${s.name}</span></div>`:''}
+          ${sbdg(p.status)}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`:''}
+
+${waiting.length?`
+  ${shdr('Esperando aplicantes')}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    ${waiting.map(p=>`
+      <div class="card card-r" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="ct">${p.name}</div>
+          <div class="cs">${p.area} · Publicado hace ${p.daysSincePost||0} días · Nexus está buscando candidatos</div>
+        </div>
+        ${bdg('br','Sin aplicantes aún')}
+      </div>`).join('')}
+  </div>`:''}
+`;
+};
+
+function confirmSelectConsultant(projId,studId){
+  const p=APP.projects.find(x=>x.id===projId);
+  const s=APP.students.find(x=>x.id===studId);
+  if(!p||!s)return;
+  confirmAction(
+    '¿Seleccionar a '+s.name+'?',
+    'El consultor será notificado y el proyecto pasará a estado activo. Esta acción no se puede deshacer.',
+    ()=>{
+      p.selectedStudent=studId;
+      p.consultant=s.name;
+      p.ci=s.init;
+      p.cc=s.cls;
+      p.status='active';
+      p.pct=0;
+      p.startDate=new Date().toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+      APP.notifications.unshift({
+        id:Date.now(),read:false,type:'success',
+        title:'Consultor seleccionado',
+        text:s.name+' asignado a "'+p.name+'"',
+        time:'Ahora',icon:'check',target:'emp/proj'
+      });
+      showToast('¡'+s.name+' seleccionado! El proyecto ahora está activo.','success');
+      goTab('emp','match');
+    }
+  );
+}
 
 // ---- EMP MENSAJES ----
 SCREENS.emp.msgs=()=>`
