@@ -652,10 +652,10 @@ const matchScore=(student,project)=>{
 // ============================================================
 const NAV={
   emp:[{id:'home',label:'Inicio',icon:'grid'},{id:'new',label:'Nuevo proyecto',icon:'plus'},{id:'proj',label:'Mis proyectos',icon:'folder'},{id:'match',label:'Seleccionar consultor',icon:'link'},{id:'msgs',label:'Mensajes',icon:'msg'},{id:'mem',label:'Membresía',icon:'bolt'},{id:'pay',label:'Pagos',icon:'receipt'}],
-  est:[{id:'home',label:'Inicio',icon:'grid'},{id:'explore',label:'Explorar proyectos',icon:'search'},{id:'myproy',label:'Mis proyectos',icon:'folder'},{id:'courses',label:'Cursos',icon:'book'},{id:'perf',label:'Mi desempeño',icon:'star'},{id:'earn',label:'Ganancias',icon:'dollar'}],
+  est:[{id:'home',label:'Inicio',icon:'grid'},{id:'explore',label:'Explorar proyectos',icon:'search'},{id:'myproy',label:'Mis proyectos',icon:'folder'},{id:'msgs',label:'Mensajes',icon:'msg'},{id:'courses',label:'Cursos',icon:'book'},{id:'perf',label:'Mi desempeño',icon:'star'},{id:'earn',label:'Ganancias',icon:'dollar'}],
   dash:[{id:'home',label:'Dashboard',icon:'grid'},{id:'rev',label:'Ingresos',icon:'chart'},{id:'kanban',label:'Proyectos',icon:'folder'},{id:'match',label:'Matching',icon:'link'},{id:'talent',label:'Talento',icon:'user'},{id:'cur',label:'Cursos',icon:'book'},{id:'act',label:'Actividad',icon:'bell'},{id:'billing',label:'Facturación',icon:'receipt'},{id:'sim',label:'Simulador',icon:'sim'}],
 };
-const TABS={emp:{home:'Inicio',new:'Nuevo proyecto',proj:'Proyectos',match:'Seleccionar consultor',msgs:'Mensajes',mem:'Membresía',pay:'Pagos'},est:{home:'Inicio',explore:'Explorar',myproy:'Mis proyectos',courses:'Cursos',perf:'Desempeño',earn:'Ganancias'},dash:{home:'Dashboard',rev:'Ingresos',kanban:'Proyectos',match:'Matching',talent:'Talento',cur:'Cursos',act:'Actividad',billing:'Facturación',sim:'Simulador'}};
+const TABS={emp:{home:'Inicio',new:'Nuevo proyecto',proj:'Proyectos',match:'Seleccionar consultor',msgs:'Mensajes',mem:'Membresía',pay:'Pagos'},est:{home:'Inicio',explore:'Explorar',myproy:'Mis proyectos',msgs:'Mensajes',courses:'Cursos',perf:'Desempeño',earn:'Ganancias'},dash:{home:'Dashboard',rev:'Ingresos',kanban:'Proyectos',match:'Matching',talent:'Talento',cur:'Cursos',act:'Actividad',billing:'Facturación',sim:'Simulador'}};
 const MODELABELS={emp:'Empresas',est:'Estudiantes',dash:'Panel socios'};
 
 function setMode(m){
@@ -722,6 +722,7 @@ function postRender(m,t){
     document.querySelectorAll('.skill-bar-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w+'%'});
   },60);
   if(m==='emp'&&t==='msgs')renderChat();
+  if(m==='est'&&t==='msgs'){renderEstChat();renderEstChatFiles();}
   if(m==='dash'&&t==='kanban')initKanban();
   if(m==='emp'&&t==='new')updateWizDots();
   if(m==='dash'&&t==='rev')initRevFilters();
@@ -2435,7 +2436,7 @@ SCREENS.est.home=()=>`
       return`<div class="card card-g card-hover" onclick="goTab('est','myproy')">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><div><div class="ct">${p.name}</div><div class="cs">Pago estimado: ${payRange} · Entrega ${p.delivery}</div></div>${sbdg(p.status)}</div>
         ${prog(p.pct,'pg')}<div class="pmeta" style="margin-bottom:12px"><span>Semana ${p.cw}/${p.weeks}</span><span>${p.pct}%</span></div>
-        <div style="display:flex;gap:8px">${btn(ic('upload',12)+' Subir avance','btn-sm',false,"showToast('Selecciona el archivo','info')")}${btn(ic('msg',12)+' Chat','btn-sm btn-ghost',false,"goTab('emp','msgs')")}</div>
+        <div style="display:flex;gap:8px">${btn(ic('upload',12)+' Subir avance','btn-sm',false,"showToast('Selecciona el archivo','info')")}${btn(ic('msg',12)+' Chat','btn-sm btn-ghost',false,"goTab('est','msgs')")}</div>
       </div>`;}).join('')}
     ${shdr('Cursos activos','Ver todos →',"goTab('est','courses')")}
     ${APP.myEnrolledCourses.map(id=>{const c=APP.courses.find(x=>x.id===id);return c?`
@@ -2540,7 +2541,7 @@ SCREENS.est.myproy=()=>`
       ${prog(p.pct,'pg')}<div class="pmeta" style="margin-bottom:14px"><span>Semana ${p.cw} de ${p.weeks}</span><span>${p.pct}%</span></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${btn(ic('upload',12)+' Subir entregable','btn-g btn-sm',false,"showToast('Selecciona el archivo a subir','info')")}
-        ${btn(ic('msg',12)+' Chat con cliente','btn-sm btn-ghost',false,"goTab('emp','msgs')")}
+        ${btn(ic('msg',12)+' Chat con cliente','btn-sm btn-ghost',false,"goTab('est','msgs')")}
         ${btn(ic('eye',12)+' Ver brief','btn-sm btn-ghost',false,"showToast('Abriendo brief del proyecto...','info')")}
       </div>
     </div>`;}).join('')}
@@ -2573,6 +2574,189 @@ SCREENS.est.myproy=()=>`
       <div style="margin-top:10px">${btn('Retirar aplicación','btn-sm btn-ghost',false,`retractApply(${op.id})`)}</div>
     </div>`).join('')}
 </div>`;
+
+// ---- EST MENSAJES ----
+SCREENS.est.msgs=()=>{
+  // Student sees same conversations but from their POV
+  // They talk TO the company (reversed sender perspective)
+  const estConvs=APP.chatConversations.map(c=>({
+    ...c,
+    // Flip: 'me' becomes 'them', consultant becomes 'me'
+    messages:c.messages.map(m=>({
+      ...m,
+      from:m.from==='me'?'client':m.from==='consultant'?'me':m.from,
+      name:m.from==='me'?c.name:m.name,
+    }))
+  }));
+
+  const activeConv=estConvs[APP.activeEstChat??0];
+  if(APP.activeEstChat===undefined)APP.activeEstChat=0;
+
+  return`
+<div class="grid-2" style="align-items:start">
+  <!-- Conversation list -->
+  <div>
+    ${shdr('Mis conversaciones')}
+    ${estConvs.map((c,i)=>{
+      const lastMsg=c.messages.filter(m=>m.text).slice(-1)[0];
+      const fileCount=(c.files||[]).length;
+      const isActive=i===(APP.activeEstChat??0);
+      return`<div class="card card-hover conv-item${isActive?' card-g':''}"
+        style="border:2px solid ${isActive?'var(--g3)':'var(--sb)'};cursor:pointer"
+        onclick="switchEstChat(${i})">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="position:relative;flex-shrink:0">
+            <!-- Company avatar (TG, FT, etc.) -->
+            <div style="width:40px;height:40px;border-radius:10px;background:var(--bk3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace">
+              ${c.project.slice(0,2).toUpperCase()}
+            </div>
+            <div style="position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:${c.online?'var(--g3)':'var(--t4)'};border:2px solid var(--wh)"></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
+              <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.project}</div>
+              <div class="cs2" style="flex-shrink:0;margin-left:6px">${lastMsg?.time||''}</div>
+            </div>
+            <div class="cs2" style="margin-bottom:4px">Cliente: ${c.name}</div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div class="cs2" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">
+                ${lastMsg?.text?.slice(0,45)||'Archivo compartido'}...
+              </div>
+              ${fileCount>0?`<span style="font-size:10px;background:var(--ind-ll);color:var(--ind);padding:1px 6px;border-radius:10px;font-weight:600;flex-shrink:0">${fileCount} archivo${fileCount>1?'s':''}</span>`:''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Chat window -->
+  <div style="display:flex;flex-direction:column;gap:0">
+    <!-- Chat header -->
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--wh);border:1px solid var(--sb);border-radius:var(--r) var(--r) 0 0">
+      <div style="width:36px;height:36px;border-radius:9px;background:var(--bk3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;flex-shrink:0">
+        ${activeConv.project.slice(0,2).toUpperCase()}
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700" id="est-chat-hdr">${activeConv.project}</div>
+        <div class="cs2">Cliente: ${activeConv.name} · ${activeConv.online?'<span style="color:var(--g3)">● En línea</span>':'<span style="color:var(--t3)">● Offline</span>'}</div>
+      </div>
+      ${btn(ic('file',13)+' Archivos','btn-ghost btn-sm',false,'toggleEstChatFiles()')}
+    </div>
+
+    <!-- Messages area -->
+    <div class="chat-wrap" id="est-chat-area" style="border-radius:0;border-top:none;border-bottom:none;height:300px"></div>
+
+    <!-- Files panel -->
+    <div id="est-chat-files-panel" style="display:none;background:var(--sl);border:1px solid var(--sb);border-top:none;border-bottom:none;padding:12px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--t2)">ARCHIVOS DE ESTA CONVERSACIÓN</div>
+      <div id="est-chat-files-list"></div>
+      ${btn(ic('upload',13)+' Compartir archivo','btn-sec btn-sm',false,"showToast('Selecciona el archivo a compartir','info')")}
+    </div>
+
+    <!-- Input -->
+    <div style="display:flex;gap:8px;align-items:flex-end;padding:12px;background:var(--wh);border:1px solid var(--sb);border-top:none;border-radius:0 0 var(--r) var(--r)">
+      <div style="position:relative;flex:1">
+        <textarea class="field" id="est-chat-in" placeholder="Escribe un mensaje al cliente... (Enter para enviar)" rows="2"
+          style="resize:none;padding-right:40px"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendEstMsg()}"></textarea>
+        <button onclick="showToast('Selecciona el archivo a adjuntar','info')"
+          style="position:absolute;right:10px;bottom:10px;background:none;border:none;cursor:pointer;color:var(--t3)">
+          ${ic('upload',16,'var(--t3)')}
+        </button>
+      </div>
+      ${btn(ic('send',14),'btn-g btn-icon',false,'sendEstMsg()')}
+    </div>
+    <div id="est-chat-typing" style="min-height:20px;padding:4px 12px"></div>
+  </div>
+</div>`;
+};
+
+function switchEstChat(idx){
+  APP.activeEstChat=idx;
+  document.querySelectorAll('.conv-item').forEach((el,i)=>{
+    el.classList.toggle('card-g',i===idx);
+    el.style.border=i===idx?'2px solid var(--g3)':'2px solid var(--sb)';
+  });
+  renderEstChat();
+  renderEstChatFiles();
+}
+
+function renderEstChat(){
+  const conv=APP.chatConversations[APP.activeEstChat??0];
+  if(!conv)return;
+  const area=document.getElementById('est-chat-area');
+  if(!area)return;
+  const fileColors={xlsx:'var(--g3)',pdf:'var(--rose)',pptx:'var(--ind)',pbix:'var(--amb)',default:'var(--t2)'};
+  // Render from student's perspective: 'consultant' = me, 'me' (company) = them
+  area.innerHTML=conv.messages.map(m=>{
+    const isMe=m.from==='consultant'; // student is the consultant
+    const isFile=m.from==='file';
+    if(isFile){
+      const col=fileColors[m.fileType]||fileColors.default;
+      return`<div class="msg ${isMe?'msg-me':'msg-other'}">
+        ${!isMe?`<div class="msg-name">${conv.name}</div>`:''}
+        <div class="msg-bubble" style="background:var(--sl);border:1px solid var(--sb);color:var(--txt);display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer" onclick="showToast('Descargando ${m.fileName}...','info')">
+          ${ic('file',18,col)}
+          <div><div style="font-weight:600;font-size:13px">${m.fileName}</div><div class="cs2">${m.fileSize}</div></div>
+          <div style="margin-left:auto">${ic('link',14,'var(--g3)')}</div>
+        </div>
+        <div class="msg-time">${m.time}</div>
+      </div>`;
+    }
+    return`<div class="msg ${isMe?'msg-me':'msg-other'}">
+      ${!isMe?`<div class="msg-name">${conv.name}</div>`:''}
+      <div class="msg-bubble">${m.text}</div>
+      <div class="msg-time">${m.time}</div>
+    </div>`;
+  }).join('');
+  area.scrollTop=area.scrollHeight;
+}
+
+function renderEstChatFiles(){
+  const conv=APP.chatConversations[APP.activeEstChat??0];
+  const list=document.getElementById('est-chat-files-list');
+  if(!list||!conv)return;
+  const files=conv.files||[];
+  const fileColors={xlsx:'var(--g3)',pdf:'var(--rose)',pptx:'var(--ind)',pbix:'var(--amb)',default:'var(--t2)'};
+  const fileBgs={xlsx:'var(--g-ll)',pdf:'var(--rose-l)',pptx:'var(--ind-ll)',pbix:'var(--amb-l)',default:'var(--wh3)'};
+  if(!files.length){list.innerHTML='<div class="cs2" style="text-align:center;padding:12px">Sin archivos compartidos</div>';return;}
+  list.innerHTML=files.map(f=>{
+    const col=fileColors[f.type]||fileColors.default;
+    const bg=fileBgs[f.type]||fileBgs.default;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--rs);background:${bg};margin-bottom:6px;cursor:pointer" onclick="showToast('Descargando ${f.name}...','info')">
+      <div style="width:34px;height:34px;border-radius:6px;background:var(--wh);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:var(--sh)">${ic('file',18,col)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</div>
+        <div class="cs2">${f.date} · ${f.size}</div>
+      </div>
+      ${btn(ic('link',12),'btn-sm btn-ghost')}
+    </div>`;
+  }).join('');
+}
+
+function toggleEstChatFiles(){
+  const panel=document.getElementById('est-chat-files-panel');
+  if(panel){panel.style.display=panel.style.display==='none'?'block':'none';renderEstChatFiles();}
+}
+
+function sendEstMsg(){
+  const inp=document.getElementById('est-chat-in');
+  if(!inp||!inp.value.trim())return;
+  const conv=APP.chatConversations[APP.activeEstChat??0];
+  if(!conv)return;
+  conv.messages.push({from:'consultant',name:'Tú',text:inp.value.trim(),time:'Ahora'});
+  inp.value='';
+  renderEstChat();
+  // Simulate company reply
+  const typing=document.getElementById('est-chat-typing');
+  if(typing){typing.innerHTML='<span class="cs2">'+conv.name+' está escribiendo <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></span>';}
+  setTimeout(()=>{
+    conv.messages.push({from:'me',name:conv.name,text:'Gracias, lo revisamos y te confirmamos.',time:'Ahora'});
+    if(typing)typing.innerHTML='';
+    renderEstChat();
+  },2000);
+}
 
 // ---- EST PERF ----
 SCREENS.est.perf=()=>{
@@ -2617,37 +2801,41 @@ SCREENS.est.perf=()=>{
 SCREENS.est.earn=()=>{
   const s=APP.students[0];
   const donePrjs=APP.projects.filter(p=>p.status==='done');
-  const totalEarned=donePrjs.reduce((a,p)=>{
-    const base=Math.round(p.cost*(p.rating>=4?.8:p.rating>=3?.7:.6));
-    const bonus=p.earlyBonus?Math.round(base*.05):0;
-    return a+base+bonus;
-  },0);
+
+  // Payments: base is what student receives (60-80% of project cost)
+  // 5★ → max amount, 4★ → 90% of max, 3★ → 80% of max, 1-2★ → 70% of max
+  const maxPct=0.7; // 70% of project cost = student's MAX payout (5★)
+  const calcPay=(p)=>{
+    const maxPay=Math.round(p.cost*maxPct);
+    const base=p.rating>=5?maxPay:p.rating>=4?Math.round(maxPay*.9):p.rating>=3?Math.round(maxPay*.8):Math.round(maxPay*.7);
+    const bonus=p.earlyBonus?Math.round(maxPay*.07):0;
+    return{maxPay,base,bonus,total:base+bonus};
+  };
+  const totalEarned=donePrjs.reduce((a,p)=>a+calcPay(p).total,0);
   const avgPay=donePrjs.length?Math.round(totalEarned/donePrjs.length):5600;
-  const proj1=avgPay;
-  const proj3=avgPay*3;
-  const proj6=avgPay*6;
-  const proj12=avgPay*12;
-  const bonusProj=Math.round(avgPay*1.05);
-  // Bar chart data: last 6 months (simulated)
+  const bonusProj=Math.round(avgPay*1.07);
+
+  // Monthly data - fixed px heights (not %)
   const months=['Nov','Dic','Ene','Feb','Mar','Abr'];
   const monthVals=[3200,4100,0,5600,4800,3200];
   const maxVal=Math.max(...monthVals,1);
+  const BAR_MAX_PX=100; // max bar height in px
+
+  // selected month state
+  if(!APP.earnSelectedMonth)APP.earnSelectedMonth=null;
 
   return`
-<!-- Hero banner -->
-<div class="hero hero-g" style="margin-bottom:24px">
+<div class="hero hero-g" style="margin-bottom:20px">
   <div class="hero-eye">Tus ganancias · Abril 2025</div>
-  <div class="hero-title">${fmtMXN(totalEarned)} <span style="font-size:20px;opacity:.6">total ganado</span></div>
-  <div class="hero-sub">${donePrjs.length} proyectos completados · Rating promedio ${s.rating}★ · Pago al completar cada entrega</div>
+  <div class="hero-title">${fmtMXN(totalEarned)} <span style="font-size:18px;opacity:.6">total ganado</span></div>
+  <div class="hero-sub">${donePrjs.length} proyectos completados · Rating ${s.rating}★ · Pago al entregar y aprobar</div>
   <div class="hero-chips">
-    <span class="hchip hchip-hi">${fmtMXN(proj1)}/mes proyectado</span>
-    <span class="hchip">70–80% del valor del proyecto</span>
-    <span class="hchip">+5% bono si terminas antes con 5★</span>
+    <span class="hchip hchip-hi">${fmtMXN(avgPay)} promedio por proyecto</span>
+    <span class="hchip">+7% bono por entrega puntual con 5★</span>
   </div>
 </div>
 
-<!-- KPI row -->
-<div class="stat-grid sg4" style="margin-bottom:24px">
+<div class="stat-grid sg4" style="margin-bottom:20px">
   <div class="stat-card">
     <div class="stat-ico si-g">${ic('dollar',16,'var(--g3)')}</div>
     <div class="stat-val">${fmtMXN(totalEarned)}</div>
@@ -2657,130 +2845,174 @@ SCREENS.est.earn=()=>{
   <div class="stat-card">
     <div class="stat-ico si-g">${ic('trend',16,'var(--g3)')}</div>
     <div class="stat-val">${fmtMXN(3200)}</div>
-    <div class="stat-lbl">Este mes</div>
-    <div class="stat-delta up">↑ vs mes anterior</div>
+    <div class="stat-lbl">Este mes (Abr)</div>
+    <div class="stat-delta up">↑ vs marzo</div>
   </div>
   <div class="stat-card">
     <div class="stat-ico si-a">${ic('award',16,'var(--amb)')}</div>
     <div class="stat-val">${fmtMXN(avgPay)}</div>
     <div class="stat-lbl">Pago promedio</div>
-    <div class="stat-delta">por proyecto</div>
+    <div class="stat-delta">por proyecto completado</div>
   </div>
   <div class="stat-card">
     <div class="stat-ico si-g">${ic('star',16,'var(--g3)')}</div>
     <div class="stat-val">${s.rating}★</div>
-    <div class="stat-lbl">Rating actual</div>
-    <div class="stat-delta">Determina tu % de pago</div>
+    <div class="stat-lbl">Tu rating</div>
+    <div class="stat-delta up">Nivel máximo de pago</div>
   </div>
 </div>
 
-<!-- Gráfica + Proyección -->
 <div class="grid-2" style="margin-bottom:20px">
 
-  <!-- Gráfica de barras -->
+  <!-- HISTOGRAMA INTERACTIVO -->
   <div class="card">
-    <div style="font-size:14px;font-weight:700;margin-bottom:4px">Ingresos por mes</div>
-    <div class="cs2" style="margin-bottom:18px">Últimos 6 meses · MXN</div>
-    <div style="display:flex;align-items:flex-end;gap:10px;height:130px;padding:0 4px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+      <div>
+        <div style="font-size:14px;font-weight:700">Ingresos por mes</div>
+        <div class="cs2">Últimos 6 meses · haz click en una barra</div>
+      </div>
+      <div id="earn-hover-info" style="text-align:right;min-width:80px">
+        <div class="cs2">Mejor mes</div>
+        <div style="font-size:15px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(Math.max(...monthVals))}</div>
+      </div>
+    </div>
+
+    <!-- Bars container with fixed px heights -->
+    <div style="display:flex;align-items:flex-end;gap:8px;height:${BAR_MAX_PX+20}px;padding:20px 4px 0;position:relative">
       ${months.map((m,i)=>{
-        const h=monthVals[i]?Math.round(monthVals[i]/maxVal*100):0;
+        const v=monthVals[i];
+        const px=v?Math.max(6,Math.round(v/maxVal*BAR_MAX_PX)):0;
         const isThis=m==='Abr';
-        return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
-          ${monthVals[i]?`<div style="font-size:10px;font-weight:600;color:var(--g3);font-family:'JetBrains Mono',monospace">$${Math.round(monthVals[i]/1000)}k</div>`:'<div style="font-size:10px;color:var(--t3)">—</div>'}
-          <div style="width:100%;flex:1;display:flex;align-items:flex-end">
-            <div style="width:100%;height:${h}%;border-radius:6px 6px 0 0;background:${isThis?'var(--g3)':'var(--g5)'};opacity:${isThis?1:0.55};transition:height .4s ease;min-height:${monthVals[i]?'4px':'0'}"></div>
+        const isEmpty=v===0;
+        return`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%;cursor:${isEmpty?'default':'pointer'}"
+          onmouseenter="${isEmpty?'':`document.getElementById('earn-hover-info').innerHTML='<div class=\\'cs2\\'>'+this.dataset.month+'<\\/div><div style=\\'font-size:15px;font-weight:700;color:var(--g3);font-family:\\'JetBrains Mono\\',monospace\\'>${fmtMXN(v)}<\\/div>';`}"
+          onmouseleave="document.getElementById('earn-hover-info').innerHTML='<div class=\\'cs2\\'>Mejor mes<\\/div><div style=\\'font-size:15px;font-weight:700;color:var(--g3);font-family:\\'JetBrains Mono\\',monospace\\'>${fmtMXN(Math.max(...monthVals))}<\\/div>'"
+          onclick="${isEmpty?'':`APP.earnSelectedMonth='${m}';showEarnMonthDetail('${m}',${v})`}"
+          data-month="${m}">
+          <!-- Value label above bar -->
+          <div style="font-size:9px;font-weight:600;color:${isThis?'var(--g3)':isEmpty?'var(--t4)':'var(--t2)'};font-family:'JetBrains Mono',monospace;height:14px;display:flex;align-items:center">
+            ${v?'$'+Math.round(v/1000)+'k':''}
           </div>
-          <div style="font-size:11px;color:${isThis?'var(--g3)':'var(--t3)'};font-weight:${isThis?700:400}">${m}</div>
+          <!-- The bar itself - px height not % -->
+          <div style="
+            width:100%;
+            height:${px}px;
+            border-radius:5px 5px 0 0;
+            background:${isThis?'var(--g3)':isEmpty?'var(--sb)':'var(--g5)'};
+            opacity:${isThis?1:isEmpty?1:0.55};
+            transition:opacity .15s,transform .15s;
+            flex-shrink:0;
+          "
+          onmouseenter="if(${!isEmpty})this.style.opacity='1';this.style.transform='scaleX(1.05)'"
+          onmouseleave="this.style.opacity='${isThis?1:isEmpty?1:0.55}';this.style.transform='scaleX(1)'">
+          </div>
+          <!-- Month label -->
+          <div style="font-size:10px;color:${isThis?'var(--g3)':isEmpty?'var(--t4)':'var(--t3)'};font-weight:${isThis?700:400};height:14px;display:flex;align-items:center">
+            ${m}
+          </div>
         </div>`;
       }).join('')}
     </div>
-    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--sb);display:flex;justify-content:space-between">
-      <div><div class="cs2">Promedio mensual</div><div style="font-size:15px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(Math.round(monthVals.filter(v=>v>0).reduce((a,b)=>a+b,0)/monthVals.filter(v=>v>0).length))}</div></div>
-      <div style="text-align:right"><div class="cs2">Mejor mes</div><div style="font-size:15px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(Math.max(...monthVals))}</div></div>
+
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--sb);display:flex;justify-content:space-between">
+      <div>
+        <div class="cs2">Promedio mensual</div>
+        <div style="font-size:14px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">
+          ${fmtMXN(Math.round(monthVals.filter(v=>v>0).reduce((a,b)=>a+b,0)/monthVals.filter(v=>v>0).length))}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="cs2">Sin ingresos</div>
+        <div style="font-size:14px;font-weight:700;color:var(--t3);font-family:'JetBrains Mono',monospace">
+          ${monthVals.filter(v=>v===0).length} mes${monthVals.filter(v=>v===0).length!==1?'es':''}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Cómo se calcula tu pago -->
+  <!-- ¿CÓMO SE CALCULA TU PAGO? -->
   <div class="card">
     <div style="font-size:14px;font-weight:700;margin-bottom:4px">¿Cómo se calcula tu pago?</div>
-    <div class="cs2" style="margin-bottom:16px">Tu calificación final determina el porcentaje que recibes</div>
+    <div class="cs2" style="margin-bottom:14px">Tu calificación final determina cuánto recibes del monto máximo asignado a tu proyecto</div>
+
+    <!-- Scale bars -->
     ${[
-      ['★★★★★ (5 estrellas)','80% del proyecto + bono 5%','var(--g3)','be'],
-      ['★★★★☆ (4 estrellas)','80% del proyecto','var(--g3)','be'],
-      ['★★★☆☆ (3 estrellas)','70% del proyecto','var(--amb)','ba'],
-      ['★★☆☆☆ (1-2 estrellas)','60% del proyecto','var(--rose)','br'],
-    ].map(([stars,pago,col,cls])=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);background:var(--sl);margin-bottom:8px">
-        <div style="font-size:13px;flex:1"><div style="font-weight:600;margin-bottom:2px">${stars}</div><div class="cs2">${pago}</div></div>
-        ${bdg(cls,pago.includes('bono')?'+ Bono':'Estándar')}
+      {stars:5,label:'★★★★★',desc:'Recibes el monto máximo completo',extra:'+ 7% bono si entregas antes',pct:100,col:'var(--g3)',cls:'be',badge:'Máximo + Bono'},
+      {stars:4,label:'★★★★☆',desc:'Recibes el 90% del monto máximo',extra:'',pct:90,col:'var(--g3)',cls:'be',badge:'90% del máximo'},
+      {stars:3,label:'★★★☆☆',desc:'Recibes el 80% del monto máximo',extra:'',pct:80,col:'var(--amb)',cls:'bb',badge:'80% del máximo'},
+      {stars:2,label:'★★☆☆☆',desc:'Recibes el 70% del monto máximo',extra:'',pct:70,col:'var(--rose)',cls:'br',badge:'70% del máximo'},
+    ].map(r=>`
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#F59E0B;font-size:13px;letter-spacing:-1px">${r.label}</span>
+            ${s.rating===r.stars?`<span style="font-size:10px;background:var(--g-ll);color:var(--g1);padding:1px 6px;border-radius:10px;font-weight:600">Tu nivel</span>`:''}
+          </div>
+          ${bdg(r.cls,r.badge)}
+        </div>
+        <div style="height:8px;background:var(--sb);border-radius:4px;overflow:hidden;margin-bottom:3px">
+          <div style="height:100%;width:${r.pct}%;background:${r.col};border-radius:4px"></div>
+        </div>
+        <div class="cs2">${r.desc}${r.extra?` · <span style="color:var(--g3);font-weight:600">${r.extra}</span>`:''}</div>
       </div>`).join('')}
+
     <div style="margin-top:12px;padding:12px;background:var(--g-ll);border-radius:var(--rs);border:1px solid var(--g4)">
-      <div style="font-size:13px;font-weight:600;color:var(--g1);margin-bottom:4px">🎯 Tu calificación actual: ${s.rating}★</div>
-      <div style="font-size:12px;color:var(--g1)">Recibes <b>80%</b> del valor del proyecto. Si terminas antes con 5★, sumas <b>+5% extra</b>.</div>
+      <div style="font-size:13px;font-weight:600;color:var(--g1);margin-bottom:4px">🎯 Tu nivel actual: ${s.rating}★</div>
+      <div style="font-size:12px;color:var(--g1);line-height:1.55">
+        Estás en el nivel más alto — recibes el <b>monto máximo</b> del proyecto.
+        Entrega antes de la fecha límite con 5★ para sumar el <b>bono de puntualidad del 7%</b>.
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Proyección semestral detallada -->
+<!-- PROYECCIÓN -->
 <div class="card" style="margin-bottom:20px">
   <div style="font-size:14px;font-weight:700;margin-bottom:4px">Proyección de ganancias</div>
-  <div class="cs2" style="margin-bottom:20px">Basado en 1 proyecto/mes · Rating ${s.rating}★ · Sin bono vs Con bono de puntualidad</div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+  <div class="cs2" style="margin-bottom:18px">Basado en tu historial · 1 proyecto/mes · Rating ${s.rating}★</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
     ${[
-      ['Este mes','$5,600 – $7,200',proj1,bonusProj,'Abr 2025'],
-      ['3 meses','$16,800 – $21,600',proj3,Math.round(bonusProj*3),'Jun 2025'],
-      ['Semestre','$33,600 – $43,200',proj6,Math.round(bonusProj*6),'Oct 2025'],
-      ['Año completo','$67,200 – $86,400',proj12,Math.round(bonusProj*12),'Abr 2026'],
-    ].map(([periodo,rango,base,conBonus,hasta])=>`
-      <div style="background:var(--sl);border-radius:var(--rs);padding:16px;text-align:center">
-        <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${periodo}</div>
-        <div style="font-size:18px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace;line-height:1.1">${fmtMXN(base)}</div>
-        <div style="font-size:11px;color:var(--g3);margin-top:2px">sin bono</div>
-        <div style="width:100%;height:1px;background:var(--sb);margin:10px 0"></div>
-        <div style="font-size:15px;font-weight:700;color:var(--amb);font-family:'JetBrains Mono',monospace">${fmtMXN(conBonus)}</div>
-        <div style="font-size:11px;color:var(--amb);margin-top:2px">con bono 5★</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:8px">hasta ${hasta}</div>
+      ['Este mes',avgPay,bonusProj,'Abr 2025'],
+      ['3 meses',avgPay*3,bonusProj*3,'Jun 2025'],
+      ['6 meses',avgPay*6,bonusProj*6,'Oct 2025'],
+      ['12 meses',avgPay*12,bonusProj*12,'Abr 2026'],
+    ].map(([periodo,base,conBonus,hasta])=>`
+      <div style="background:var(--sl);border-radius:var(--rs);padding:14px;text-align:center">
+        <div style="font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${periodo}</div>
+        <div style="font-size:17px;font-weight:700;color:var(--txt);font-family:'JetBrains Mono',monospace;line-height:1.1">${fmtMXN(Math.round(base))}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">sin bono</div>
+        <div style="width:100%;height:1px;background:var(--sb);margin:8px 0"></div>
+        <div style="font-size:14px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(Math.round(conBonus))}</div>
+        <div style="font-size:10px;color:var(--g3);margin-top:2px">con bono 7★</div>
+        <div style="font-size:9px;color:var(--t3);margin-top:6px">hasta ${hasta}</div>
       </div>`).join('')}
   </div>
-  <!-- Visual timeline -->
-  <div style="position:relative;padding:10px 0">
-    <div style="height:3px;background:var(--sb);border-radius:2px;position:relative;margin:0 10px">
-      <div style="position:absolute;left:0;top:0;height:100%;background:var(--g3);border-radius:2px;width:8%"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:8px">
-      ${['Hoy','3m','6m','12m'].map(t=>`<div style="font-size:10px;color:var(--t3);text-align:center">${t}</div>`).join('')}
-    </div>
-  </div>
-  <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.7">
-    * Proyección asume 1 proyecto activo por mes con entrega completa. El bono del +5% aplica únicamente cuando terminas antes de la fecha acordada y recibes calificación de 5 estrellas.
+  <div style="font-size:11px;color:var(--t3);line-height:1.6">
+    * Proyección asume 1 proyecto mensual completado con calificación máxima. El bono del 7% aplica solo cuando entregas antes de la fecha límite y recibes 5 estrellas.
   </div>
 </div>
 
-<!-- Historial + Retiro -->
+<!-- HISTORIAL + RETIRO -->
 <div class="grid-2">
   <div>
     ${shdr('Historial de pagos recibidos')}
     <div class="tw">
       <table>
         <thead><tr>
-          <th>Proyecto</th>
-          <th>Pago base</th>
-          <th>Bono</th>
-          <th>Total recibido</th>
-          <th>Fecha</th>
+          <th>Proyecto</th><th>Pago recibido</th><th>Bono</th><th>Total</th><th>Fecha</th>
         </tr></thead>
         <tbody>
           ${donePrjs.length?donePrjs.map(p=>{
-            const base=Math.round(p.cost*(p.rating>=4?.8:p.rating>=3?.7:.6));
-            const bonus=p.earlyBonus?Math.round(base*.05):0;
+            const {base,bonus,total}=calcPay(p);
             return`<tr>
-              <td><div style="font-weight:500">${p.name}</div><div class="cs2">${p.client}</div></td>
+              <td><div style="font-weight:500">${p.name}</div><div class="cs2">${['★'.repeat(p.rating)+'☆'.repeat(5-p.rating)] || ''} ${p.rating}★</div></td>
               <td class="mono">${fmtMXN(base)}</td>
               <td class="mono" style="color:var(--g3)">${bonus>0?'+'+fmtMXN(bonus):'—'}</td>
-              <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(base+bonus)}</td>
+              <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(total)}</td>
               <td class="cs2">${p.delivery}</td>
             </tr>`;}).join('')
-          :`<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--t3)">Aún no tienes pagos recibidos</td></tr>`}
+          :`<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--t3)">Aún no tienes pagos</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -2794,30 +3026,62 @@ SCREENS.est.earn=()=>{
         ${bdg('be','Verificada')}
       </div>
       <div style="background:var(--sl);border-radius:var(--rs);padding:12px;margin-bottom:14px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="cs">Disponible para retirar</span><span style="font-size:18px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(3200)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span class="cs">Disponible para retirar</span>
+          <span style="font-size:18px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(3200)}</span>
+        </div>
         <div class="cs2">Saldo de proyecto completado en abril</div>
       </div>
       <div style="display:flex;gap:8px">
         ${btn(ic('dollar',13)+' Retirar ahora','btn-g',false,"showToast('Retiro iniciado — llegará en 24h','success')")}
-        ${btn('Cambiar cuenta','btn-sec btn-sm',false,"showToast('Abre la configuración de cuenta','info')")}
+        ${btn('Cambiar cuenta','btn-sec btn-sm',false,"showToast('Abre configuración de cuenta','info')")}
       </div>
     </div>
+
     ${shdr('Tips para ganar más')}
     <div class="card" style="background:var(--sl)">
       ${[
-        ['Mantén tu rating en 5★','Pasa de 70% a 80% de pago + bono del 5%'],
-        ['Entrega antes de tiempo','Activa el bono de puntualidad (+5%)'],
-        ['Acepta proyectos de mayor valor','El 80% de $12,000 supera al 80% de $7,000'],
-        ['Toma más cursos','Aumenta tu match score y accedes a mejores proyectos'],
+        ['Mantén tu calificación en 5★','Recibes el monto máximo del proyecto en cada entrega'],
+        ['Entrega siempre antes de tiempo','Activa el bono de puntualidad del 7% sobre tu pago'],
+        ['Elige proyectos más largos o complejos','Los proyectos de mayor alcance tienen montos máximos más altos'],
+        ['Toma cursos en la plataforma','Aumenta tu score de compatibilidad y apareces en más proyectos relevantes'],
+        ['Responde rápido a los mensajes','Las empresas prefieren consultores con comunicación ágil'],
       ].map(([t,d])=>`
         <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--sb)">
           <div style="width:20px;height:20px;border-radius:50%;background:var(--g3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${ic('check',10,'#fff')}</div>
-          <div><div style="font-size:13px;font-weight:600">${t}</div><div class="cs2">${d}</div></div>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:2px">${t}</div><div class="cs2">${d}</div></div>
         </div>`).join('')}
     </div>
   </div>
 </div>`;
 };
+
+function showEarnMonthDetail(month,val){
+  const monthData={
+    Nov:{proj:'Flujo de efectivo Q3',pay:3200,rating:5,bonus:false},
+    Dic:{proj:'Análisis de costos',pay:4100,rating:4,bonus:false},
+    Ene:{proj:null,pay:0,rating:0,bonus:false},
+    Feb:{proj:'Modelo financiero 2025',pay:5600,rating:5,bonus:true},
+    Mar:{proj:'Benchmark precios',pay:4800,rating:5,bonus:false},
+    Abr:{proj:'Análisis costos operativos',pay:3200,rating:null,bonus:false},
+  };
+  const d=monthData[month];
+  if(!d||!d.pay){showToast('Sin ingresos en '+month,'info');return;}
+  openModal('Detalle de ingresos — '+month,`
+    <div style="text-align:center;padding:20px 0;border-bottom:1px solid var(--sb);margin-bottom:16px">
+      <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">${month} 2025</div>
+      <div style="font-size:40px;font-weight:800;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(d.pay)}</div>
+      <div class="cs" style="margin-top:6px">ingresados en este periodo</div>
+    </div>
+    ${d.proj?`
+    <div style="background:var(--sl);border-radius:var(--rs);padding:14px;margin-bottom:12px">
+      <div class="cs2" style="margin-bottom:4px">Proyecto</div>
+      <div style="font-weight:600;font-size:14px;margin-bottom:6px">${d.proj}</div>
+      ${d.rating?`<div style="color:#F59E0B;font-size:18px">${'★'.repeat(d.rating)}${'☆'.repeat(5-d.rating)}</div>`:''}
+      ${d.bonus?`<div style="margin-top:8px;padding:8px;background:var(--g-ll);border-radius:var(--rs);font-size:12px;color:var(--g1)">🎉 Bono de puntualidad aplicado</div>`:''}
+    </div>`:`<div class="cs2" style="text-align:center;padding:20px">Sin proyectos registrados en este mes</div>`}
+  `,'');
+}
 // ---- DASH HOME ----
 SCREENS.dash.home=()=>`
 <div class="filter-row" style="margin-bottom:16px">
