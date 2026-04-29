@@ -2442,6 +2442,176 @@ SCREENS.emp.home=()=>{
 </div>`;
 };
 
+// ---- EMP PROJ ----
+SCREENS.emp.proj=()=>{
+  if(APP.projFilter===undefined)APP.projFilter='all';
+  if(APP.projSort===undefined)APP.projSort='recent';
+
+  const myProjs=APP.projects.filter(p=>p.client==='Tecno Grupo');
+  const filtered=APP.projFilter==='all'?myProjs:myProjs.filter(p=>p.status===APP.projFilter);
+
+  // Stats row
+  const counts={all:myProjs.length,active:myProjs.filter(p=>p.status==='active').length,review:myProjs.filter(p=>p.status==='review').length,nomatch:myProjs.filter(p=>p.status==='nomatch').length,done:myProjs.filter(p=>p.status==='done').length};
+  const totalInv=myProjs.filter(p=>p.status==='done').reduce((a,p)=>a+p.cost,0);
+
+  return`
+<!-- Header -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+  <div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:3px">Mis proyectos</div>
+    <div class="cs">Historial completo de todos tus proyectos en Nexus</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <select class="field" style="width:auto;font-size:12px" onchange="APP.projSort=this.value;goTab('emp','proj')">
+      <option value="recent"${APP.projSort==='recent'?' selected':''}>Más recientes</option>
+      <option value="cost"${APP.projSort==='cost'?' selected':''}>Mayor costo</option>
+      <option value="pct"${APP.projSort==='pct'?' selected':''}>Por progreso</option>
+    </select>
+    ${btn('+ Nuevo proyecto','btn-g',false,"goTab('emp','new')")}
+  </div>
+</div>
+
+<!-- Stats mini bar -->
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
+  ${[
+    {key:'all',label:'Todos',val:counts.all,col:'var(--t2)',bg:'var(--sl)'},
+    {key:'active',label:'Activos',val:counts.active,col:'var(--ind)',bg:'var(--ind-ll)'},
+    {key:'review',label:'En revisión',val:counts.review,col:'var(--amb)',bg:'var(--amb-l)'},
+    {key:'nomatch',label:'Sin match',val:counts.nomatch,col:'var(--rose)',bg:'var(--rose-l)'},
+    {key:'done',label:'Completados',val:counts.done,col:'var(--g3)',bg:'var(--g-ll)'},
+  ].map(f=>`
+    <div onclick="APP.projFilter='${f.key}';goTab('emp','proj')"
+      style="background:${APP.projFilter===f.key?f.bg:'var(--wh)'};border:2px solid ${APP.projFilter===f.key?f.col:'var(--sb)'};border-radius:var(--r);padding:10px 12px;cursor:pointer;transition:all .14s;text-align:center">
+      <div style="font-size:20px;font-weight:800;color:${f.col};font-family:'JetBrains Mono',monospace;line-height:1">${f.val}</div>
+      <div style="font-size:10.5px;color:${APP.projFilter===f.key?f.col:'var(--t3)'};font-weight:${APP.projFilter===f.key?600:400};margin-top:2px">${f.label}</div>
+    </div>`).join('')}
+</div>
+
+<!-- Extra stats for completed -->
+${myProjs.filter(p=>p.status==='done').length?`
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:8px;background:var(--g-ll);display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic('dollar',15,'var(--g3)')}</div>
+    <div><div style="font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace">${fmtMXN(totalInv)}</div><div class="cs2">Total invertido</div></div>
+  </div>
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:8px;background:var(--amb-l);display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic('star',15,'var(--amb)')}</div>
+    <div><div style="font-size:15px;font-weight:700">${(myProjs.filter(p=>p.rating>0).reduce((a,p)=>a+(p.rating||0),0)/Math.max(myProjs.filter(p=>p.rating>0).length,1)).toFixed(1)}★</div><div class="cs2">Calidad promedio</div></div>
+  </div>
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:8px;background:var(--g-ll);display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic('check',15,'var(--g3)')}</div>
+    <div><div style="font-size:15px;font-weight:700">${(myProjs.filter(p=>p.status==='done').reduce((a,p)=>a+p.weeks,0)/Math.max(myProjs.filter(p=>p.status==='done').length,1)).toFixed(1)} sem</div><div class="cs2">Tiempo promedio</div></div>
+  </div>
+</div>`:''}
+
+<!-- Project list -->
+${filtered.length===0?`
+  <div style="text-align:center;padding:60px;color:var(--t3)">
+    <div style="font-size:36px;margin-bottom:12px">📁</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">Sin proyectos en esta categoría</div>
+    <div class="cs" style="margin-bottom:16px">Cambia el filtro o publica un nuevo proyecto</div>
+    ${btn('+ Nuevo proyecto','btn-g',false,"goTab('emp','new')")}
+  </div>`
+:filtered.map(p=>{
+  const isActive=p.status==='active';
+  const isReview=p.status==='review';
+  const isDone=p.status==='done';
+  const isNomatch=p.status==='nomatch';
+  const borderCol=isReview?'var(--ind)':isNomatch?'var(--rose)':isDone?'var(--g3)':'var(--sb)';
+  const s=APP.students.find(x=>x.id===p.consultantId);
+
+  return`
+  <div class="card" style="margin-bottom:10px;border-left:3px solid ${borderCol}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <!-- Left: name + meta -->
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap">
+          <div style="font-size:14px;font-weight:700">${p.name}</div>
+          ${sbdg(p.status)}
+          ${isReview?`<span style="font-size:10px;background:var(--ind-ll);color:var(--ind);padding:2px 8px;border-radius:10px;font-weight:600;animation:pulse 2s infinite">⏳ Esperando tu revisión</span>`:''}
+        </div>
+        <div class="cs">${p.type} · Área: ${p.area} · ${p.weeks} semanas · Entrega: ${p.delivery}</div>
+        <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+          ${p.tags.map(t=>`<span class="tag">${t}</span>`).join('')}
+          ${p.priority==='urgente'?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--rose-l);color:var(--rose-d);font-weight:600">⚡ Urgente</span>`:''}
+          ${p.priority==='alta'?`<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--amb-l);color:var(--amb-d);font-weight:600">🔶 Prioridad alta</span>`:''}
+        </div>
+      </div>
+      <!-- Right: cost + dates -->
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:18px;font-weight:800;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(p.cost)}</div>
+        ${isDone&&p.rating?`<div style="color:#F59E0B;font-size:13px;font-weight:600">${'★'.repeat(p.rating)}${'☆'.repeat(5-p.rating)}</div>`:''}
+        ${isDone&&p.earlyBonus?`<div style="font-size:10px;color:var(--g3);font-weight:600">🎉 Bono 5★ aplicado</div>`:''}
+      </div>
+    </div>
+
+    <!-- Consultant row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:${isActive||isReview?'12px':'8px'}">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${p.consultant&&p.ci?`
+          ${ava(p.ci,p.cc,30)}
+          <div>
+            <div style="font-size:12.5px;font-weight:600">${p.consultant}</div>
+            <div class="cs2">${s?s.career+' · '+s.uni:''}</div>
+          </div>
+          ${s?`<span style="color:#F59E0B;font-size:11px;font-weight:600">★${s.rating}</span>`:''}
+        `:`<div style="font-size:12px;color:var(--t3);font-style:italic">Sin consultor asignado${isNomatch?' — buscando match':''}</div>`}
+      </div>
+      ${p.startDate?`<div class="cs2">Inicio: ${p.startDate}</div>`:''}
+    </div>
+
+    <!-- Progress bar (active/review only) -->
+    ${isActive||isReview?`
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t3);margin-bottom:4px">
+        <span>Semana ${p.cw} de ${p.weeks}</span>
+        <span style="font-weight:600;color:${isReview?'var(--ind)':'var(--g3)'}">${p.pct}%</span>
+      </div>
+      <div style="height:7px;background:var(--sb);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${p.pct}%;background:${isReview?'var(--ind)':'var(--g3)'};border-radius:4px;transition:width .5s ease"></div>
+      </div>
+    </div>`:''}
+
+    <!-- Notes banner -->
+    ${p.notes&&!isDone?`
+    <div style="background:var(--amb-l);border-radius:var(--rs);padding:9px 12px;font-size:12px;color:var(--amb-d);margin-bottom:10px;display:flex;gap:7px;align-items:flex-start">
+      ${ic('alert',13,'var(--amb)')}<span>${p.notes}</span>
+    </div>`:''}
+
+    <!-- Review ready banner -->
+    ${isReview?`
+    <div style="background:var(--ind-ll);border-radius:var(--rs);padding:10px 13px;font-size:12.5px;color:var(--ind);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border:1px solid var(--ind-l)">
+      <div style="display:flex;gap:7px;align-items:center">${ic('file',14,'var(--ind)')}<b>Entregable listo — revisa y aprueba para liberar el pago</b></div>
+      <div style="display:flex;gap:6px">
+        ${btn('Solicitar cambios','btn-sec btn-sm',false,`requestRevision(${p.id})`)}
+        ${btn('✓ Aprobar y pagar '+fmtMXN(p.cost),'btn-g btn-sm',false,`approveProject(${p.id})`)}
+      </div>
+    </div>`:''}
+
+    <!-- Nomatch similar projects -->
+    ${isNomatch&&APP.projects.filter(x=>x.id!==p.id&&x.area===p.area&&x.status!=='nomatch').length?`
+    <div style="background:var(--sl);border-radius:var(--rs);padding:10px;margin-bottom:10px;font-size:12px;color:var(--t2)">
+      💡 Proyectos similares en <b>${p.area}</b> ya tienen consultor asignado. Tu proyecto está en la cola de matching.
+    </div>`:''}
+
+    <!-- Actions -->
+    <div style="display:flex;gap:7px;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--sb)">
+      ${btn(ic('eye',13)+' Ver detalle','btn-sec btn-sm',false,`openProjectModal(${p.id})`)}
+      ${!isNomatch&&p.consultant?btn(ic('msg',12)+' Chat','btn-ghost btn-sm',false,"goTab('emp','msgs')"):''}
+      ${isNomatch?btn('👥 Ver candidatos','btn-ghost btn-sm',false,"goTab('emp','match')"):''}
+      ${isDone&&!p.rating?btn('★ Calificar','btn-ghost btn-sm',false,`openProjectModal(${p.id})`):''}
+      ${isDone?btn(ic('file',12)+' Exportar reporte','btn-sec btn-sm',false,"showToast('Descargando reporte...','info')"):''}
+    </div>
+  </div>`;
+}).join('')}
+
+${!filtered.length&&APP.projFilter!=='all'?'':`
+<!-- Bottom CTA -->
+<div style="text-align:center;padding:20px 0">
+  ${btn('+ Publicar nuevo proyecto','btn-g',false,"goTab('emp','new')")}
+</div>`}`;
+};
+
 // ---- EMP NEW ----
 SCREENS.emp.new=()=>`
 <div style="max-width:760px;margin:0 auto">
