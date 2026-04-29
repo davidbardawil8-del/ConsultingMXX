@@ -507,6 +507,15 @@ const APP={
     }
   },
   revFilter:{period:'mes',month:'Abril',year:2025},
+  earnSelectedMonth:'Abr',
+  earnMonthData:{
+    Nov:{val:3200,proj:'Flujo de efectivo Q3',rating:5,bonus:false,client:'La Fogata MX',weeks:2},
+    Dic:{val:4100,proj:'Análisis de costos Dic',rating:4,bonus:false,client:'Confecciones RG',weeks:2},
+    Ene:{val:0,proj:null,rating:0,bonus:false,client:null,weeks:0},
+    Feb:{val:5600,proj:'Modelo financiero 2025',rating:5,bonus:true,client:'Tecno Grupo',weeks:3},
+    Mar:{val:4800,proj:'Benchmark precios Q1',rating:5,bonus:false,client:'Flowtask',weeks:2},
+    Abr:{val:3200,proj:'Análisis costos operativos',rating:null,bonus:false,client:'Tecno Grupo',weeks:2},
+  },
   projects:[
     {id:1,name:'Modelo financiero 2025',client:'Tecno Grupo',consultant:'Luis Acosta',ci:'LA',cc:'ag',type:'Modelo financiero',area:'Finanzas',status:'active',pct:60,cost:9500,weeks:3,cw:2,delivery:'18 abr',tags:['Excel','Finanzas'],rating:0,notes:'Revisar supuestos del escenario base',appliedStudents:[1,2],selectedStudent:1,startDate:'28 mar',daysLeft:11},
     {id:2,name:'Análisis de costos operativos',client:'Tecno Grupo',consultant:'Mónica Álvarez',ci:'MA',cc:'ae',type:'Análisis de costos',area:'Costos',status:'review',pct:90,cost:6500,weeks:3,cw:3,delivery:'25 abr',tags:['Power BI','Costos'],rating:0,notes:'',appliedStudents:[2],selectedStudent:2,startDate:'4 abr',daysLeft:3},
@@ -1408,94 +1417,198 @@ function refreshRevStats(){
   const isYear=APP.revFilter.period==='año';
   const yrData=APP.monthlyData[yr]||{};
   const mKeys=Object.keys(yrData);
-  const mShort=mKeys.map(k=>k.slice(0,3));
 
+  // ── Compute period data ──
   let d;
   if(isYear){
     d=mKeys.reduce((acc,m)=>{
       const md=yrData[m]||{};
-      return{mem:acc.mem+(md.mem||0),com:acc.com+(md.com||0),cur:acc.cur+(md.cur||0),rev:acc.rev+(md.rev||0),companies:Math.max(acc.companies,md.companies||0),projects:acc.projects+(md.projects||0),students:Math.max(acc.students,md.students||0),matchRate:acc.matchRate+(md.matchRate||0)/_cnt,avgRating:acc.avgRating+(md.avgRating||0)/_cnt,matchDays:acc.matchDays+(md.matchDays||0)/_cnt,onTime:acc.onTime+(md.onTime||0)/_cnt};
-    },{mem:0,com:0,cur:0,rev:0,companies:0,projects:0,students:0,matchRate:0,avgRating:0,matchDays:0,onTime:0});
-    const _cnt=mKeys.length||1;
-    d=mKeys.reduce((acc,m)=>{
-      const md=yrData[m]||{};
-      return{mem:(acc.mem||0)+(md.mem||0),com:(acc.com||0)+(md.com||0),cur:(acc.cur||0)+(md.cur||0),rev:(acc.rev||0)+(md.rev||0),companies:Math.max(acc.companies||0,md.companies||0),projects:(acc.projects||0)+(md.projects||0),students:Math.max(acc.students||0,md.students||0)};
+      return{
+        mem:(acc.mem||0)+(md.mem||0),
+        com:(acc.com||0)+(md.com||0),
+        cur:(acc.cur||0)+(md.cur||0),
+        rev:(acc.rev||0)+(md.rev||0),
+        companies:Math.max(acc.companies||0,md.companies||0),
+        projects:(acc.projects||0)+(md.projects||0),
+        students:Math.max(acc.students||0,md.students||0),
+      };
     },{});
-    d.matchRate=Math.round(mKeys.filter(m=>yrData[m].matchRate).reduce((a,m)=>a+(yrData[m].matchRate||0),0)/(mKeys.filter(m=>yrData[m].matchRate).length||1));
-    d.avgRating=(mKeys.filter(m=>yrData[m].avgRating).reduce((a,m)=>a+(yrData[m].avgRating||0),0)/(mKeys.filter(m=>yrData[m].avgRating).length||1)).toFixed(1);
+    const withData=mKeys.filter(m=>yrData[m]&&yrData[m].matchRate>0);
+    d.matchRate=withData.length?Math.round(withData.reduce((a,m)=>a+(yrData[m].matchRate||0),0)/withData.length):0;
+    const withRating=mKeys.filter(m=>yrData[m]&&yrData[m].avgRating>0);
+    d.avgRating=withRating.length?+(withRating.reduce((a,m)=>a+(yrData[m].avgRating||0),0)/withRating.length).toFixed(1):0;
   } else {
     d=yrData[month]||{mem:0,com:0,cur:0,rev:0,companies:0,projects:0,students:0,matchRate:0,avgRating:0,matchDays:0,onTime:0};
   }
 
   const tot=(d.mem||0)+(d.com||0)+(d.cur||0);
-  const curMonth=isYear?'Año '+yr:month;
 
-  // Update stat cards
-  const statEls={
-    'rev-mem':fmtMXN(d.mem||0),
-    'rev-com':fmtMXN(d.com||0),
-    'rev-cur':fmtMXN(d.cur||0),
-    'rev-tot':fmtMXN(tot),
-    'rev-cos':String(d.companies||0),
-    'rev-proj':String(d.projects||0),
-    'rev-stu':String(d.students||0),
-    'rev-match':(d.matchRate||0)+'%',
-    'rev-rating':String(d.avgRating||0)+'★',
-    'rev-days':String(d.matchDays||0)+' días',
-    'rev-ontime':String(d.onTime||0)+'%',
-  };
+  // ── Update stat labels ──
+  const statEls={'rev-mem':fmtMXN(d.mem||0),'rev-com':fmtMXN(d.com||0),'rev-cur':fmtMXN(d.cur||0),'rev-tot':fmtMXN(tot),'rev-cos':String(d.companies||0),'rev-proj':String(d.projects||0),'rev-stu':String(d.students||0),'rev-match':(d.matchRate||0)+'%','rev-rating':String(d.avgRating||0)+'★'};
   Object.entries(statEls).forEach(([id,val])=>{const el=document.getElementById(id);if(el)el.textContent=val;});
 
-  // Update all 4 gauges dynamically
+  // Update period label
+  const pLbl=document.getElementById('gauge-period-lbl');
+  if(pLbl)pLbl.textContent=isYear?('Año '+yr):(month+' '+yr);
+
+  // ── Gauges: metas scale ×12 in year mode ──
+  const metaScale=isYear?12:1;
   const sources=[
-    {id:'gauge-mem',val:d.mem||0,meta:25000},
-    {id:'gauge-com',val:d.com||0,meta:20000},
-    {id:'gauge-cur',val:d.cur||0,meta:15000},
-    {id:'gauge-tot',val:tot,meta:60000},
+    {id:'gauge-mem',val:d.mem||0,meta:25000*metaScale},
+    {id:'gauge-com',val:d.com||0,meta:20000*metaScale},
+    {id:'gauge-cur',val:d.cur||0,meta:15000*metaScale},
+    {id:'gauge-tot',val:tot,meta:60000*metaScale},
   ];
   sources.forEach(src=>{
     const pct=Math.min(100,Math.round(src.val/src.meta*100));
     const offset=Math.round(251*(1-pct/100));
-    // Update arc
     const arc=document.getElementById(src.id+'-arc');
-    if(arc)arc.setAttribute('stroke-dashoffset',offset);
-    // Update pct text
-    const pctEl=document.getElementById(src.id+'-pct');
-    if(pctEl)pctEl.textContent=pct+'%';
-    // Update amount
-    const amtEl=document.getElementById(src.id+'-amt');
-    if(amtEl)amtEl.textContent=fmtMXN(src.val);
-    // Update status
+    if(arc){arc.setAttribute('stroke-dashoffset',String(offset));arc.style.transition='stroke-dashoffset .6s ease';}
+    const pctEl=document.getElementById(src.id+'-pct');if(pctEl)pctEl.textContent=pct+'%';
+    const amtEl=document.getElementById(src.id+'-amt');if(amtEl)amtEl.textContent=fmtMXN(src.val);
+    const metaEl=document.getElementById(src.id+'-meta');if(metaEl)metaEl.textContent='meta '+fmtMXN(src.meta)+(isYear?'/año':'/mes');
     const stEl=document.getElementById(src.id+'-st');
-    if(stEl){
-      stEl.textContent=pct>=100?'✓ Meta alcanzada':pct>=70?'Buen ritmo':'Por debajo de meta';
-      stEl.style.color=pct>=100?'var(--g3)':pct>=70?'var(--amb)':'var(--rose)';
-    }
+    if(stEl){stEl.textContent=pct>=100?'✓ Meta alcanzada':pct>=70?'Buen ritmo':'Por debajo de meta';stEl.style.color=pct>=100?'var(--g3)':pct>=70?'var(--amb)':'var(--rose)';}
   });
 
-  // Update histogram bars
-  const mVals=mKeys.map(m=>yrData[m]?(yrData[m].mem+yrData[m].com+yrData[m].cur):0);
+  // ── Histogram bars ──
+  const mVals=mKeys.map(m=>yrData[m]?(yrData[m].mem||0)+(yrData[m].com||0)+(yrData[m].cur||0):0);
   const maxV=Math.max(...mVals,1);
   const BAR_MAX=80;
   mKeys.forEach((mk,i)=>{
     const bar=document.getElementById('revbar-'+i);
     const lbl=document.getElementById('revbar-lbl-'+i);
-    if(bar){
-      const v=mVals[i];
-      const px=v?Math.max(4,Math.round(v/maxV*BAR_MAX)):0;
-      const isActive=!isYear&&mk===month;
-      bar.style.height=px+'px';
-      bar.style.background=isActive?'var(--g3)':'var(--g5)';
-      bar.style.opacity=isActive?'1':'0.55';
-    }
-    if(lbl){
-      const isActive=!isYear&&mk===month;
-      lbl.style.color=isActive?'var(--g3)':'var(--t3)';
-      lbl.style.fontWeight=isActive?'700':'400';
+    const valLbl=document.getElementById('revbar-val-'+i);
+    const v=mVals[i];
+    const px=v?Math.max(4,Math.round(v/maxV*BAR_MAX)):0;
+    if(isYear){
+      // All bars proportional, all green, clicking any switches to that month
+      if(bar){bar.style.height=px+'px';bar.style.background=v>0?'var(--g3)':'var(--sb)';bar.style.opacity=v>0?'0.7':'0.25';bar.style.cursor=v>0?'pointer':'default';}
+      if(lbl){lbl.style.color='var(--t3)';lbl.style.fontWeight='400';}
+      if(valLbl){valLbl.textContent=v?Math.round(v/1000)+'k':'';}
+    } else {
+      const isActive=mk===month;
+      if(bar){bar.style.height=px+'px';bar.style.background=isActive?'var(--g3)':'var(--g5)';bar.style.opacity=isActive?'1':'0.55';bar.style.cursor='pointer';}
+      if(lbl){lbl.style.color=isActive?'var(--g3)':'var(--t3)';lbl.style.fontWeight=isActive?'700':'400';}
+      if(valLbl){valLbl.textContent=v?Math.round(v/1000)+'k':'';}
     }
   });
+
+  // ── Year summary strip ──
+  const yearStrip=document.getElementById('rev-year-summary');
+  if(yearStrip){
+    if(isYear){
+      const nonZeroIdx=mKeys.map((m,i)=>({m,i,v:mVals[i]})).filter(x=>x.v>0);
+      const bestEntry=nonZeroIdx.length?nonZeroIdx.reduce((a,b)=>a.v>b.v?a:b):null;
+      const avgM=nonZeroIdx.length?Math.round(nonZeroIdx.reduce((a,x)=>a+x.v,0)/nonZeroIdx.length):0;
+      const firstV=nonZeroIdx.length?nonZeroIdx[0].v:0;
+      const lastV=nonZeroIdx.length?nonZeroIdx[nonZeroIdx.length-1].v:0;
+      const growth=firstV>0?Math.round((lastV-firstV)/firstV*100):0;
+      yearStrip.style.display='block';
+      yearStrip.innerHTML=`
+<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--txt)">Resumen del año ${yr} — Click en cualquier barra para ver ese mes en detalle</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+  ${[
+    {l:'Total anual Nexus',v:fmtMXN(tot),c:'var(--g3)',sub:'suma de todos los meses'},
+    {l:'Mejor mes',v:bestEntry?bestEntry.m:'-',c:'var(--g3)',sub:bestEntry?fmtMXN(bestEntry.v):''},
+    {l:'Promedio mensual',v:fmtMXN(avgM),c:'var(--t2)',sub:(nonZeroIdx.length)+' meses con datos'},
+    {l:'Crecimiento',v:(growth>=0?'+':'')+growth+'%',c:growth>=0?'var(--g3)':'var(--rose)',sub:'primer vs último mes'},
+  ].map(k=>`<div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--rs);padding:12px;text-align:center"><div class="cs2" style="margin-bottom:4px">${k.l}</div><div style="font-size:16px;font-weight:800;color:${k.c};font-family:'JetBrains Mono',monospace">${k.v}</div><div class="cs2">${k.sub}</div></div>`).join('')}
+</div>`;
+    } else {
+      yearStrip.style.display='none';
+    }
+  }
 }
 
+function revBarClick(monthName,barIdx){
+  const isYear=APP.revFilter.period==="año";
+  if(isYear){showRevMonthDrillDown(monthName);}
+  else{APP.revFilter.month=monthName;const m=document.getElementById("rev-month");if(m)m.value=monthName;refreshRevStats();}
+}
+function showRevMonthDrillDown(monthName){
+  const yr=APP.revFilter.year||2025;
+  const yrData=APP.monthlyData[yr]||{};
+  const md=yrData[monthName]||{};
+  const tot=(md.mem||0)+(md.com||0)+(md.cur||0);
+  const mKeys=Object.keys(yrData);
+  const mVals=mKeys.map(m=>yrData[m]?(yrData[m].mem||0)+(yrData[m].com||0)+(yrData[m].cur||0):0);
+  const nonZero=mVals.filter(v=>v>0);
+  const avgM=nonZero.length?Math.round(nonZero.reduce((a,b)=>a+b,0)/nonZero.length):0;
+  const diffPct=avgM>0?Math.round((tot-avgM)/avgM*100):0;
+  const isAbove=tot>=avgM;
+  mKeys.forEach((m,i)=>{
+    const bar=document.getElementById("revbar-"+i);
+    if(bar){bar.style.background=m===monthName?"var(--g3)":"var(--g5)";bar.style.opacity=m===monthName?"1":"0.35";}
+    const lbl=document.getElementById("revbar-lbl-"+i);
+    if(lbl){lbl.style.color=m===monthName?"var(--g3)":"var(--t3)";lbl.style.fontWeight=m===monthName?"700":"400";}
+  });
+  const strip=document.getElementById("rev-year-summary");
+  if(!strip)return;
+  strip.style.display="block";
+  if(!tot){
+    strip.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between"><div><div style="font-size:14px;font-weight:700">'+monthName+' '+yr+'</div><div class="cs">Sin datos para este mes</div></div><button onclick="resetYearStrip()" style="font-size:11px;color:var(--t3);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">← Resumen anual</button></div>';
+    return;
+  }
+  const memBreakdown=APP.companies.map(co=>{const p={gratis:0,basico:1200,pro:2500,empresa:4950}[co.plan]||0;return{name:co.name,amount:p};}).filter(x=>x.amount>0);
+  const pct=Math.min(100,Math.round(tot/60000*100));
+  const off=Math.round(251*(1-pct/100));
+  const col=pct>=100?"var(--g3)":pct>=70?"var(--amb)":"var(--rose)";
+  strip.innerHTML=`
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+  <div><div style="font-size:15px;font-weight:800">${monthName} ${yr}</div><div class="cs">Click en otra barra para cambiar mes</div></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:11px;font-weight:600;color:${isAbove?"var(--g3)":"var(--rose)"};padding:3px 10px;border-radius:20px;background:${isAbove?"var(--g-ll)":"var(--rose-l)"};border:1px solid ${isAbove?"var(--g4)":"var(--red-border)"}">${isAbove?"↑":"↓"} ${diffPct>=0?"+":""}${diffPct}% vs promedio</span>
+    <button onclick="resetYearStrip()" style="font-size:11px;color:var(--t3);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit">← Resumen anual</button>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+  ${[
+    {l:"Total Nexus",v:fmtMXN(tot),c:"var(--g3)",bg:"var(--g-ll)",bc:"var(--g4)"},
+    {l:"Membresías",v:fmtMXN(md.mem||0),c:"var(--g3)",bg:"var(--wh)",bc:"var(--sb)"},
+    {l:"Comisiones",v:fmtMXN(md.com||0),c:"var(--amb)",bg:"var(--wh)",bc:"var(--sb)"},
+    {l:"Cursos",v:fmtMXN(md.cur||0),c:"var(--ind)",bg:"var(--wh)",bc:"var(--sb)"},
+  ].map(k=>`<div style="background:${k.bg};border:1px solid ${k.bc};border-radius:var(--rs);padding:12px;text-align:center"><div class="cs2" style="margin-bottom:4px">${k.l}</div><div style="font-size:16px;font-weight:800;color:${k.c};font-family:'JetBrains Mono',monospace">${k.v}</div></div>`).join("")}
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--rs);padding:12px;text-align:center">
+    <div style="font-size:11px;font-weight:600;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">vs Meta mensual</div>
+    <svg viewBox="0 0 200 115" style="width:130px;overflow:visible">
+      <path d="M20 100 A80 80 0 0 1 180 100" stroke="var(--sb)" stroke-width="14" fill="none" stroke-linecap="round"/>
+      <path d="M20 100 A80 80 0 0 1 180 100" stroke="${col}" stroke-width="14" fill="none" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="${off}" style="transition:stroke-dashoffset .5s"/>
+      <text x="100" y="85" text-anchor="middle" style="font-size:18px;font-weight:800;fill:${col};font-family:'JetBrains Mono',monospace">${pct}%</text>
+      <text x="100" y="100" text-anchor="middle" style="font-size:9px;fill:var(--t3)">meta $60,000</text>
+    </svg>
+    <div style="font-size:12px;font-weight:600;color:${col};margin-top:4px">${fmtMXN(tot)}</div>
+  </div>
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--rs);padding:12px">
+    <div style="font-size:11px;font-weight:600;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Empresas membresía</div>
+    ${memBreakdown.slice(0,4).map(c=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--sb);font-size:11px"><span style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px">${c.name}</span><span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--g3)">${fmtMXN(c.amount)}</span></div>`).join("")}
+    ${memBreakdown.length>4?`<div class="cs2" style="margin-top:4px">+${memBreakdown.length-4} más</div>`:""}
+  </div>
+  <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--rs);padding:12px">
+    <div style="font-size:11px;font-weight:600;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Operativas</div>
+    ${[
+      {l:"Empresas",v:md.companies||0},{l:"Proyectos",v:md.projects||0},
+      {l:"Consultores",v:md.students||0},{l:"Match rate",v:(md.matchRate||0)+"%"},
+      {l:"Rating",v:(md.avgRating||0)+"★"},
+    ].map(r=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--sb)"><span class="cs2">${r.l}</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace">${r.v}</span></div>`).join("")}
+  </div>
+</div>`;
+}
+function resetYearStrip(){
+  refreshRevStats();
+  const yr=APP.revFilter.year||2025;
+  const yrData=APP.monthlyData[yr]||{};
+  const mKeys=Object.keys(yrData);
+  const mVals=mKeys.map(m=>yrData[m]?(yrData[m].mem||0)+(yrData[m].com||0)+(yrData[m].cur||0):0);
+  mKeys.forEach((m,i)=>{
+    const bar=document.getElementById("revbar-"+i);
+    if(bar){bar.style.background=mVals[i]>0?"var(--g3)":"var(--sb)";bar.style.opacity=mVals[i]>0?"0.7":"0.25";}
+    const lbl=document.getElementById("revbar-lbl-"+i);
+    if(lbl){lbl.style.color="var(--t3)";lbl.style.fontWeight="400";}
+  });
+}
 function filterRevTable(btn,type){
   document.querySelectorAll('.pill').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
@@ -3985,12 +4098,28 @@ SCREENS.est.earn=()=>{
   </div>
 </div>
 
-<div class="stat-grid sg4" style="margin-bottom:18px">
-  <div class="stat-card"><div class="stat-ico si-g">${ic('dollar',16,'var(--g3)')}</div><div class="stat-val">${fmtMXN(totalEarned)}</div><div class="stat-lbl">Total histórico</div><div class="stat-delta up">${donePrjs.length} proyectos</div></div>
-  <div class="stat-card"><div class="stat-ico si-g">${ic('trend',16,'var(--g3)')}</div><div class="stat-val">${fmtMXN(3200)}</div><div class="stat-lbl">Este mes</div><div class="stat-delta up">↑ vs marzo</div></div>
-  <div class="stat-card"><div class="stat-ico si-a">${ic('award',16,'var(--amb)')}</div><div class="stat-val">${fmtMXN(avgPay)}</div><div class="stat-lbl">Pago promedio</div><div class="stat-delta">por proyecto</div></div>
-  <div class="stat-card"><div class="stat-ico si-g">${ic('star',16,'var(--g3)')}</div><div class="stat-val">${s.rating}★</div><div class="stat-lbl">Tu rating</div><div class="stat-delta up">Nivel máximo</div></div>
-</div>
+${(()=>{
+  const sel=APP.earnSelectedMonth||'Abr';
+  const md=APP.earnMonthData[sel]||{};
+  const isSelected=sel!=='Abr';
+  const prevMonths=['Nov','Dic','Ene','Feb','Mar'];
+  const selIdx=['Nov','Dic','Ene','Feb','Mar','Abr'].indexOf(sel);
+  const prevVal=selIdx>0?APP.earnMonthData[['Nov','Dic','Ene','Feb','Mar','Abr'][selIdx-1]]?.val||0:0;
+  const delta=prevVal>0?Math.round((md.val-prevVal)/prevVal*100):0;
+  const deltaStr=delta>0?'↑ +'+delta+'% vs mes anterior':delta<0?'↓ '+delta+'% vs mes anterior':'→ igual que mes anterior';
+  const deltaCol=delta>0?'up':delta<0?'down':'';
+  return`<div class="stat-grid sg4" style="margin-bottom:18px">
+    <div class="stat-card"><div class="stat-ico si-g">${ic('dollar',16,'var(--g3)')}</div><div class="stat-val">${fmtMXN(totalEarned)}</div><div class="stat-lbl">Total histórico</div><div class="stat-delta up">${donePrjs.length} proyectos</div></div>
+    <div class="stat-card" style="border-color:${isSelected||true?'var(--g3)':'var(--sb)'};background:var(--g-ll)">
+      <div class="stat-ico si-g">${ic('trend',16,'var(--g3)')}</div>
+      <div class="stat-val">${md.val?fmtMXN(md.val):'$0'}</div>
+      <div class="stat-lbl">${sel} 2025</div>
+      <div class="stat-delta ${deltaCol}">${md.val?deltaStr:'Sin ingresos'}</div>
+    </div>
+    <div class="stat-card"><div class="stat-ico si-a">${ic('award',16,'var(--amb)')}</div><div class="stat-val">${fmtMXN(avgPay)}</div><div class="stat-lbl">Pago promedio</div><div class="stat-delta">por proyecto</div></div>
+    <div class="stat-card"><div class="stat-ico si-g">${ic('star',16,'var(--g3)')}</div><div class="stat-val">${md.rating?md.rating+'★':s.rating+'★'}</div><div class="stat-lbl">Rating en ${sel}</div><div class="stat-delta up">Nivel máximo</div></div>
+  </div>`;
+})()}
 
 <div class="grid-2" style="margin-bottom:18px">
   <!-- HISTOGRAMA INTERACTIVO -->
@@ -4010,7 +4139,7 @@ SCREENS.est.earn=()=>{
         const isThis=m==='Abr';
         const isEmpty=v===0;
         return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;cursor:${isEmpty?'default':'pointer'}"
-          onclick="${isEmpty?'':'showEarnMonthDetail(\''+m+'\','+v+')'}"
+          onclick="${isEmpty?'':'selectEarnMonth(\''+m+'\')'}"
 
           onmouseleave="document.getElementById('earn-hover-box').innerHTML='<div class=\\'cs2\\'>Mejor mes</div><div style=\\'font-size:14px;font-weight:700;color:var(--g3);font-family:\\'JetBrains Mono\\',monospace\\'>${fmtMXN(Math.max(...monthVals))}</div>'">
           <div style="font-size:9px;font-weight:600;color:${isThis?'var(--g3)':isEmpty?'var(--t4)':'var(--t2)'};font-family:'JetBrains Mono',monospace;height:13px;display:flex;align-items:center">
@@ -4024,9 +4153,75 @@ SCREENS.est.earn=()=>{
         </div>`;
       }).join('')}
     </div>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--sb);display:flex;justify-content:space-between">
-      <div><div class="cs2">Promedio mensual</div><div style="font-size:14px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(Math.round(monthVals.filter(v=>v>0).reduce((a,b)=>a+b,0)/monthVals.filter(v=>v>0).length))}</div></div>
-      <div style="text-align:right"><div class="cs2">Sin ingresos</div><div style="font-size:14px;font-weight:700;color:var(--t3);font-family:'JetBrains Mono',monospace">${monthVals.filter(v=>v===0).length} mes</div></div>
+    <!-- Velocímetro: promedio vs mes actual -->
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--sb)">
+      ${(()=>{
+        const activeMonthVals=monthVals.filter(v=>v>0);
+        const avg=activeMonthVals.length?Math.round(activeMonthVals.reduce((a,b)=>a+b,0)/activeMonthVals.length):0;
+        const selMth=APP.earnSelectedMonth||'Abr';
+        const selIdx2=['Nov','Dic','Ene','Feb','Mar','Abr'].indexOf(selMth);
+        const current=selIdx2>=0?monthVals[selIdx2]:monthVals[monthVals.length-1];
+        // Gauge: current vs avg. Max = avg*2 for the arc
+        const maxG=Math.max(avg*2,current+500,1);
+        const pct=Math.min(100,Math.round(current/maxG*100));
+        const avgPct=Math.min(100,Math.round(avg/maxG*100));
+        // Arc math: semicircle 0→180deg, dasharray=251
+        const ARC=251;
+        const offsetCurr=Math.round(ARC*(1-pct/100));
+        const offsetAvg=Math.round(ARC*(1-avgPct/100));
+        const isAbove=current>=avg;
+        const diff=Math.abs(current-avg);
+        const diffPct=avg>0?Math.round((current-avg)/avg*100):0;
+        const gaugeCol=isAbove?'var(--g3)':'var(--rose)';
+        return`
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <!-- SVG gauge -->
+          <div style="flex-shrink:0;text-align:center">
+            <svg viewBox="0 0 200 115" style="width:170px;overflow:visible">
+              <!-- Fondo gris del arco -->
+              <path d="M20 100 A80 80 0 0 1 180 100" stroke="var(--sb)" stroke-width="14" fill="none" stroke-linecap="round"/>
+              <!-- Arco promedio (gris claro como referencia) -->
+              <path d="M20 100 A80 80 0 0 1 180 100" stroke="var(--sb)" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="${ARC}" stroke-dashoffset="${offsetAvg}" opacity="0.4"/>
+              <!-- Arco mes actual (color según si está por encima del promedio) -->
+              <path d="M20 100 A80 80 0 0 1 180 100" stroke="${gaugeCol}" stroke-width="14" fill="none" stroke-linecap="round"
+                stroke-dasharray="${ARC}" stroke-dashoffset="${offsetCurr}" style="transition:stroke-dashoffset .6s ease"/>
+              <!-- Indicador de promedio (línea punteada) -->
+              <path d="M20 100 A80 80 0 0 1 180 100" stroke="#9ca3af" stroke-width="2" fill="none" stroke-linecap="round"
+                stroke-dasharray="3 4" stroke-dashoffset="${offsetAvg}"/>
+              <!-- Monto central -->
+              <text x="100" y="82" text-anchor="middle" style="font-size:15px;font-weight:800;fill:${gaugeCol};font-family:'JetBrains Mono',monospace">${current?fmtMXN(current):'—'}</text>
+              <text x="100" y="97" text-anchor="middle" style="font-size:9px;fill:var(--t3)">${selMth} 2025</text>
+              <!-- Labels extremos -->
+              <text x="15" y="113" text-anchor="middle" style="font-size:8px;fill:var(--t3)">$0</text>
+              <text x="185" y="113" text-anchor="end" style="font-size:8px;fill:var(--t3)">${fmtMXN(maxG)}</text>
+              <!-- Marca del promedio -->
+              <text x="100" y="112" text-anchor="middle" style="font-size:8px;fill:#9ca3af">── promedio</text>
+            </svg>
+          </div>
+          <!-- Texto explicativo -->
+          <div style="flex:1;min-width:120px">
+            <div style="font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Promedio vs Actual</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-bottom:2px">
+              <span style="font-size:20px;font-weight:800;color:${gaugeCol};font-family:'JetBrains Mono',monospace">${current?fmtMXN(current):'—'}</span>
+              <span style="font-size:11px;color:${gaugeCol};font-weight:600">${diffPct>=0?'+'+diffPct:diffPct}%</span>
+            </div>
+            <div class="cs2" style="margin-bottom:8px">${selMth} 2025</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+              <div style="width:10px;height:3px;background:#9ca3af;border-radius:2px"></div>
+              <span class="cs2">Promedio: <span style="font-weight:600;color:var(--t2)">${fmtMXN(avg)}</span></span>
+            </div>
+            <div style="padding:6px 10px;background:${isAbove?'var(--g-ll)':'var(--rose-l)'};border-radius:var(--rs);border:1px solid ${isAbove?'var(--g4)':'var(--red-border)'};margin-top:6px">
+              <div style="font-size:11px;font-weight:600;color:${isAbove?'var(--g1)':'var(--rose-d)'}">
+                ${isAbove?'✓ Por encima del promedio':'↓ Por debajo del promedio'}
+              </div>
+              <div style="font-size:10px;color:${isAbove?'var(--g1)':'var(--rose-d)'};margin-top:1px">
+                ${isAbove?`+${fmtMXN(diff)} más que tu media`:`${fmtMXN(diff)} por debajo de tu media`}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      })()}
     </div>
   </div>
 
@@ -4142,6 +4337,12 @@ function earnBarHoverReset(maxVal){
   if(!box)return;
   box.innerHTML=`<div style="font-size:10px;color:var(--t3)">Mejor mes</div><div style="font-size:14px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${fmtMXN(maxVal)}</div>`;
 }
+function selectEarnMonth(month){
+  APP.earnSelectedMonth=month;
+  // Re-render earn screen to reflect selected month
+  goTab('est','earn');
+}
+
 function showEarnMonthDetail(month,val){
   if(!val){showToast('Sin ingresos en '+month,'info');return;}
   const data={Nov:{proj:'Flujo de efectivo Q3',rating:5,bonus:false},Dic:{proj:'Análisis de costos',rating:4,bonus:false},Feb:{proj:'Modelo financiero 2025',rating:5,bonus:true},Mar:{proj:'Benchmark precios',rating:5,bonus:false},Abr:{proj:'Análisis costos operativos',rating:null,bonus:false}};
@@ -4371,9 +4572,9 @@ SCREENS.dash.rev=()=>{
         const px=v?Math.max(4,Math.round(v/maxVal*BAR_MAX)):0;
         const isActive=mKeys[i]===curMonth;
         return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%">
-          <div style="font-size:9px;color:${isActive?'var(--g3)':'var(--t3)'};font-family:'JetBrains Mono',monospace;font-weight:${isActive?700:400};height:14px;display:flex;align-items:center">${v?Math.round(v/1000)+'k':''}</div>
+          <div id="revbar-val-${i}" style="font-size:9px;color:${isActive?'var(--g3)':'var(--t3)'};font-family:'JetBrains Mono',monospace;font-weight:${isActive?700:400};height:14px;display:flex;align-items:center">${v?Math.round(v/1000)+'k':''}</div>
           <div id="revbar-${i}"
-            onclick="APP.revFilter.month='${mKeys[i]}';APP.revFilter.period='mes';document.getElementById('rev-month').value='${mKeys[i]}';document.getElementById('rev-period').value='mes';refreshRevStats()"
+            onclick="revBarClick('${mKeys[i]}',${i})"
             style="width:100%;height:${px}px;border-radius:4px 4px 0 0;background:${isActive?'var(--g3)':'var(--g5)'};opacity:${isActive?1:0.55};cursor:pointer;transition:height .4s ease,background .25s;flex-shrink:0"
             title="${mKeys[i]} ${yr}: ${fmtMXN(v)}">
           </div>
@@ -4386,10 +4587,13 @@ SCREENS.dash.rev=()=>{
     </div>
   </div>
 
+  <!-- Year summary - populated by refreshRevStats -->
+  <div id="rev-year-summary" style="display:none;background:var(--g-ll);border:1px solid var(--g4);border-radius:var(--r);padding:16px;margin-bottom:16px"></div>
+
   <!-- 4 Indicadores por área + total — with IDs for dynamic updates -->
   <div class="card">
     <div style="font-size:14px;font-weight:700;margin-bottom:4px">Indicadores de ingreso — <span id="gauge-period-lbl">${curMonth} ${yr}</span></div>
-    <div class="cs2" style="margin-bottom:16px">Nexus recibe 100% de membresías + 30% de proyectos y cursos</div>
+    <div class="cs2" style="margin-bottom:16px">Nexus recibe 100% de membresías + 30% de proyectos y cursos · <span id="gauge-sub-lbl">de la meta mensual</span></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
       ${(()=>{
         const sources=[
@@ -4413,11 +4617,79 @@ SCREENS.dash.rev=()=>{
               <text x="180" y="118" text-anchor="end" style="font-size:8px;fill:var(--t3)">${fmtK(src.meta)}</text>
             </svg>
             <div id="${src.id}-amt" style="font-size:18px;font-weight:800;color:${src.col};font-family:'JetBrains Mono',monospace;margin:6px 0 2px">${fmtMXN(src.val)}</div>
-            <div style="font-size:10px;color:var(--t3)">meta ${fmtMXN(src.meta)}/mes</div>
+            <div id="${src.id}-meta" style="font-size:10px;color:var(--t3)">meta ${fmtMXN(src.meta)}/mes</div>
             <div id="${src.id}-st" style="margin-top:6px;font-size:10px;font-weight:600;color:${status.c}">${status.t}</div>
           </div>`;
         }).join('');
       })()}
+    </div>
+  </div>
+</div>
+
+<!-- Year breakdown table - shown when period=año -->
+<div id="rev-year-breakdown" style="display:${APP.revFilter.period==='año'?'':'none'};margin-bottom:16px">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:14px;font-weight:700">Desglose mensual — ${yr}</div>
+        <div class="cs2">Click en cualquier mes para ver su detalle completo</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="font-size:12px;font-weight:600;color:var(--g3)">Total anual: <span style="font-family:'JetBrains Mono',monospace">${fmtMXN(mKeys.reduce((a,m)=>a+(yrData[m]?(yrData[m].mem||0)+(yrData[m].com||0)+(yrData[m].cur||0):0),0))}</span></div>
+      </div>
+    </div>
+    <div class="tw" style="margin:0">
+      <table>
+        <thead><tr>
+          <th>Mes</th>
+          <th>Membresías</th>
+          <th>Comisiones</th>
+          <th>Cursos</th>
+          <th>Total Nexus</th>
+          <th>vs promedio</th>
+        </tr></thead>
+        <tbody>
+          ${(()=>{
+            const monthlyTotals=mKeys.map(mk=>{
+              const md=yrData[mk]||{};
+              return(md.mem||0)+(md.com||0)+(md.cur||0);
+            });
+            const nonZeroTots=monthlyTotals.filter(v=>v>0);
+            const monthlyAvg=nonZeroTots.length?Math.round(nonZeroTots.reduce((a,b)=>a+b,0)/nonZeroTots.length):0;
+            return mKeys.map((mk,i)=>{
+              const md=yrData[mk]||{};
+              const t=(md.mem||0)+(md.com||0)+(md.cur||0);
+              if(!t)return`<tr style="opacity:.4"><td style="color:var(--t3)">${mk}</td><td colspan="5" class="cs2">Sin datos</td></tr>`;
+              const diff=t-monthlyAvg;
+              const diffPct=monthlyAvg?Math.round(diff/monthlyAvg*100):0;
+              return`<tr style="cursor:pointer" onclick="APP.revFilter.month='${mk}';APP.revFilter.period='mes';document.getElementById('rev-period').value='mes';document.getElementById('rev-month').value='${mk}';refreshRevStats()">
+                <td style="font-weight:600">${mk}</td>
+                <td class="mono">${fmtMXN(md.mem||0)}</td>
+                <td class="mono">${fmtMXN(md.com||0)}</td>
+                <td class="mono">${fmtMXN(md.cur||0)}</td>
+                <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(t)}</td>
+                <td><span style="font-size:11px;font-weight:600;color:${diff>=0?'var(--g3)':'var(--rose)'}">${diff>=0?'+':''}${diffPct}%</span></td>
+              </tr>`;
+            }).join('');
+          })()}
+        </tbody>
+        <tfoot>
+          ${(()=>{
+            const yrTotMem=mKeys.reduce((a,m)=>a+(yrData[m]?.mem||0),0);
+            const yrTotCom=mKeys.reduce((a,m)=>a+(yrData[m]?.com||0),0);
+            const yrTotCur=mKeys.reduce((a,m)=>a+(yrData[m]?.cur||0),0);
+            const yrTot=yrTotMem+yrTotCom+yrTotCur;
+            return`<tr id="rev-year-total" style="background:var(--g-ll)">
+              <td style="font-weight:700">TOTAL ${yr}</td>
+              <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(yrTotMem)}</td>
+              <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(yrTotCom)}</td>
+              <td class="mono" style="font-weight:700;color:var(--g3)">${fmtMXN(yrTotCur)}</td>
+              <td class="mono" style="font-size:15px;font-weight:800;color:var(--g3)">${fmtMXN(yrTot)}</td>
+              <td></td>
+            </tr>`;
+          })()}
+        </tfoot>
+      </table>
     </div>
   </div>
 </div>
