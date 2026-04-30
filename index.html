@@ -3863,58 +3863,33 @@ ${!isAlumni?`
   </div>
 
   <div>
-    <!-- Job board -->
-    <div class="shdr" style="margin-bottom:12px">
-      <span class="shdr-t">Job Board Exclusivo Alumni</span>
-      ${!isAlumni?bdg('bb','Requiere Alumni'):''}
+    ${shdr('Conecta con alumni')}
+    <div class="card" style="background:var(--g-ll);border-color:var(--g4);margin-bottom:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--g1);margin-bottom:8px">¿Qué puedes hacer con la red?</div>
+      ${[
+        ['💼','Pedir mentoría','Contacta a un alumni que ya trabaja en el área que te interesa'],
+        ['🤝','Conseguir referencias','Los alumni en empresas pueden referirte directamente'],
+        ['📢','Que te recomienden','Un alumni satisfecho con tu trabajo puede abrirte puertas'],
+        ['💡','Aprender del camino','Descubre cómo construyeron su carrera después de Nexus'],
+      ].map(([ico,t,d])=>`
+        <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--g-l)">
+          <span style="font-size:18px;flex-shrink:0">${ico}</span>
+          <div><div style="font-size:12px;font-weight:600;color:var(--g1)">${t}</div><div class="cs2">${d}</div></div>
+        </div>`).join('')}
     </div>
-    ${jobBoard.map(j=>`
-      <div class="card ${!isAlumni?'':'card-hover'}" style="margin-bottom:10px;${!isAlumni?'opacity:.65;filter:blur(1px)pointer-events:none':''}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-              <div style="font-weight:700;font-size:13px">${j.role}</div>
-              ${j.urgent?bdg('br','Urgente'):''}
-            </div>
-            <div style="font-size:12px;color:var(--g3);font-weight:600">${j.company}</div>
-            <div class="cs2">${j.type} · ${j.area}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:8px">
-            <div style="font-size:12px;font-weight:700;color:var(--g3);font-family:'JetBrains Mono',monospace">${j.salary}</div>
-            <div class="cs2">${j.posted}</div>
-          </div>
-        </div>
-        <div style="font-size:11.5px;color:var(--t3);margin-bottom:8px">${j.req}</div>
-        <div style="font-size:10.5px;color:var(--t3);margin-bottom:8px">Publicado por: <span style="color:var(--g3);font-weight:500">${j.postedBy}</span></div>
-        ${isAlumni?btn('Aplicar a esta posición','btn-g btn-sm',false,`showToast('Aplicación enviada a ${j.company}','success')`):`<div style="font-size:11px;color:var(--t3)">🔒 Únete a Alumni para ver y aplicar</div>`}
-      </div>`).join('')}
-    ${!isAlumni?`<div style="margin-top:8px;text-align:center;font-size:12px;color:var(--t3)">+${jobBoard.length} posiciones disponibles al completar tu perfil Alumni</div>`:''}
-
-    <!-- Eventos -->
-    <div class="shdr" style="margin-top:16px;margin-bottom:12px">
-      <span class="shdr-t">Próximos eventos Alumni</span>
+    ${shdr('Tu impacto hasta ahora')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${[
+        {v:s.projects,l:'Proyectos completados',c:'var(--g3)'},
+        {v:fmtMXN(s.earned),l:'Total ganado',c:'var(--g3)'},
+        {v:s.rating+'★',l:'Rating promedio',c:'#F59E0B'},
+        {v:APP.myEnrolledCourses.length,l:'Cursos tomados',c:'var(--ind)'},
+      ].map(k=>`
+        <div style="background:var(--wh);border:1px solid var(--sb);border-radius:var(--rs);padding:12px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${k.c};font-family:'JetBrains Mono',monospace">${k.v}</div>
+          <div class="cs2" style="margin-top:3px">${k.l}</div>
+        </div>`).join('')}
     </div>
-    ${events.map(ev=>`
-      <div class="card card-hover" style="margin-bottom:10px" onclick="showToast('Registrándote a ${ev.title}...','success')">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div>
-            <div style="font-weight:700;font-size:13px;margin-bottom:2px">${ev.title}</div>
-            <div style="font-size:12px;color:var(--g3)">${ev.date} · ${ev.time}</div>
-            <div class="cs2">${ev.place}</div>
-          </div>
-          ${bdg(ev.type==='Workshop'?'ba':ev.type==='Demo Day'?'bb':'be',ev.type)}
-        </div>
-        <div style="font-size:12px;color:var(--t2);margin-bottom:8px;line-height:1.5">${ev.desc}</div>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div style="height:5px;background:var(--sb);border-radius:3px;width:120px">
-              <div style="height:100%;width:${Math.round(ev.registered/ev.spots*100)}%;background:var(--g3);border-radius:3px"></div>
-            </div>
-            <div class="cs2" style="margin-top:3px">${ev.registered}/${ev.spots} registrados</div>
-          </div>
-          ${btn('Registrarme','btn-g btn-sm',false,`showToast('¡Registrado en ${ev.title}!','success')`)}
-        </div>
-      </div>`).join('')}
   </div>
 </div>`;
 };
